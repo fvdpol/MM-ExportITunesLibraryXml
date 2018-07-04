@@ -4,11 +4,11 @@
 ' http://www.mediamonkey.com/forum/viewtopic.php?f=2&t=31680
 '
 ' Change history:
-' 1.0   initial version
+' 1.0   initial version (by "DC")
 ' 1.1   options added for disabling timer and showing a file selection dialog
 ' 1.2   fixed: unicode characters (e.g. Chinese) were encoded different than iTunes does
 ' 1.3   fixed: handling of & and # in URI encoding, added Last Played
-' & not allowed in fields, escape as &#38;
+' 1.4   fixed: Traktor failing import due to invalid characters in xml (& -> &#38;)
 
 option explicit     ' report undefined variables, ...
 
