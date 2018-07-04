@@ -1,3 +1,13 @@
+' This script exports the complete MediaMonkey database (songs and playlist) into
+' the iTunes xml format. Some caveats apply, for details and the latest version
+' see the MediaMonkey forum thread at
+' http://www.mediamonkey.com/forum/viewtopic.php?f=2&t=31680
+'
+' Change history:
+' 1.0   initial version
+' 1.1   options added for disabling timer and showing a file selection dialog
+' 1.2   fixed: unicode characters (e.g. Chinese) were encoded different than iTunes does
+
 option explicit     ' report undefined variables, ...
 
 ' Customize options below; then (re)start MM.
@@ -8,6 +18,41 @@ const QUERY_FOLDER = false ' set tp true to be asked each time where to save the
 
 '  ------------------------------------------------------------------
 const EXPORTING = "itunes_export_active"
+dim scriptControl ' : scriptControl = CreateObject("ScriptControl")
+
+' Returns encoded URI for provided location string. 
+function encodeLocation(location)
+  ' 10.10.2010: need jscript engine to access its encodeURI function which is not 
+  ' available in vbscript
+  if isEmpty(scriptControl) then
+    set scriptControl = CreateObject("ScriptControl")
+    scriptControl.Language = "JScript"
+  end if
+
+  location = replace(location, "\", "/")
+  encodeLocation = scriptControl.Run("encodeURI", location)
+end function
+
+' Returns UTF8 equivalent string of the provided Unicode codepoint c.
+' For the argument AscW should be used to get the Unicode codepoint
+' (not Asc).
+' Function by "Arnout", copied from this stackoverflow question:
+' http://stackoverflow.com/questions/378850/utf-8-file-appending-in-vbscript-classicasp-can-it-be-done
+function Utf8(ByVal c)
+  dim b1, b2, b3
+  if c < 128 then
+    Utf8 = chr(c)
+  elseif c < 2048 then
+    b1 = c mod 64
+    b2 = (c - b1) / 64
+    Utf8 = chr(&hc0 + b2) & chr(&h80 + b1)
+  elseif c < 65536 then
+    b1 = c mod 64
+    b2 = ((c - b1) / 64) mod 64
+    b3 = (c - b1 - (64 * b2)) / 4096
+    Utf8 = chr(&he0 + b3) & chr(&h80 + b2) & chr(&h80 + b1)
+  end if
+end function
 
 ' Returns the XML suitable escaped version of the srcstring parameter.
 ' This function is based on MapXML found in other MM scripts, e.g.
@@ -18,14 +63,14 @@ function escapeXML(srcstring)
   dim i, codepoint, currentchar, replacement
   i = 1
   while i <= Len(srcstring)
-    currentchar = Mid(srcstring, i, 1)
-    replacement = Null
+    currentchar = mid(srcstring, i, 1)
+    replacement = null
     if currentchar = "&" then
-      replacement = "&amp;"
+      replacement = "&"
     elseif currentchar = "<" then
-      replacement = "&lt;"
+      replacement = "<"
     elseif currentchar = ">" then
-      replacement = "&gt;"
+      replacement = ">"
     else
       codepoint = AscW(currentchar)
       if codepoint < 0 then ' adjust for negative (incorrect) values, see also http://support.microsoft.com/kb/272138
@@ -34,17 +79,19 @@ function escapeXML(srcstring)
       
       ' Important: reject control characters except tab, cr, lf. See also http://www.w3.org/TR/1998/REC-xml-19980210.html#NT-Char
       if codepoint > 127 or currentchar = vbTab or currentchar = vbLf or currentchar = vbCr then
-        replacement = "&#" + CStr(codepoint) + ";"
+        ' replacement = "&#" + CStr(codepoint) + ";"
+        replacement = Utf8(codepoint)
       elseif codepoint < 32 then
         replacement = ""
       end if
     end if
     
-    if not IsNull(replacement) then    
-      srcstring = Mid(srcstring, 1, i - 1) + replacement + Mid(srcstring, i + 1, Len(srcstring))
-      i = i + Len(replacement) - 1 ' 07.10.2010: no need to parse that #99999; stuff again although it does no harm
+    if not IsNull(replacement) then ' otherwise we keep the original srcstring character (common case)
+      srcstring = mid(srcstring, 1, i - 1) + replacement + Mid(srcstring, i + 1, Len(srcstring))
+      i = i + len(replacement)
+    else
+      i = i + 1
     end if
-    i = i + 1
   wend
   escapeXML = srcstring
 end function
@@ -78,7 +125,7 @@ sub addKey(fout, key, val, keytype)
       & "T" & LdgZ(Hour(val)) &  ":" & LdgZ(Minute(val)) & ":" & LdgZ(Second(val))
   end if
   
-  fout.WriteLine "         <key>" & key & "</key><" & keytype & ">" & val & "</" & keytype & ">"
+  fout.WriteLine "            <key>" & key & "</key><" & keytype & ">" & val & "</" & keytype & ">"
 end sub
 
 ' Return the full path of the file to export to. The file will be located 
@@ -149,22 +196,22 @@ sub export
   fout.WriteLine "<!DOCTYPE plist PUBLIC ""-//Apple Computer//DTD PLIST 1.0//EN"" ""http://www.apple.com/DTDs/PropertyList-1.0.dtd"">"
   fout.WriteLine "<plist version=""1.0"">"
   fout.WriteLine "<dict>"
-  fout.WriteLine "   <key>Major Version</key><integer>1</integer>"
-  fout.WriteLine "   <key>Minor Version</key><integer>1</integer>"
-  fout.WriteLine "   <key>Application Version</key><string>7.6</string>"
-  fout.WriteLine "   <key>Features</key><integer>5</integer>" ' whatever that means
-  fout.WriteLine "   <key>Show Content Ratings</key><true/>"
+  fout.WriteLine "    <key>Major Version</key><integer>1</integer>"
+  fout.WriteLine "    <key>Minor Version</key><integer>1</integer>"
+  fout.WriteLine "    <key>Application Version</key><string>7.6</string>"
+  fout.WriteLine "    <key>Features</key><integer>5</integer>" ' whatever that means
+  fout.WriteLine "    <key>Show Content Ratings</key><true/>"
   ' Fields not available in MM:
-  ' fout.WriteLine "   <key>Music Folder</key><string>file://localhost/C:/....../iTunes/iTunes%20Music/</string>"
-  ' fout.WriteLine "   <key>Library Persistent ID</key><string>4A9134D6F642512F</string>"
+  ' fout.WriteLine "    <key>Music Folder</key><string>file://localhost/C:/....../iTunes/iTunes%20Music/</string>"
+  ' fout.WriteLine "    <key>Library Persistent ID</key><string>4A9134D6F642512F</string>"
 
   ' Songs
   ' 
   ' For each song write available tag values to the library.xml. At this time 
   ' this does not include artwork, volume leveling and album rating.
   if songCount > 0 then
-    fout.WriteLine "   <key>Tracks</key>"
-    fout.WriteLine "   <dict>"
+    fout.WriteLine "    <key>Tracks</key>"
+    fout.WriteLine "    <dict>"
     i = 0
     set iter = SDB.Database.QuerySongs("")
     while not iter.EOF and not Progress.Terminate and not Script.Terminate
@@ -178,8 +225,8 @@ sub export
         SDB.ProcessMessages
       end if
 
-      fout.WriteLine "      <key>" & Song.id & "</key>"
-      fout.WriteLine "      <dict>   "
+      fout.WriteLine "        <key>" & Song.id & "</key>"
+      fout.WriteLine "        <dict>   "
       addKey fout, "Track ID", Song.id, "integer"
       addKey fout, "Name", escapeXML(Song.Title), "string"
       addKey fout, "Artist", escapeXML(Song.ArtistName), "string"
@@ -205,24 +252,26 @@ sub export
       addKey fout, "File Folder Count", -1, "integer"
       addKey fout, "Library Folder Count", -1, "integer"
       addKey fout, "Comments", escapeXML(Song.Comment), "string"
-     addKey fout, "BPM", Song.BPM, "string"
-      addKey fout, "Location", "file://localhost/" & Replace(Replace(Escape(Song.Path), "%5C", "/"), "%3A", ":"), "string"
+      
+      ' 10.10.2010: fixed: location was not correctly URI encoded before
+      ' addKey fout, "Location", "file://localhost/" & Replace(Replace(Escape(Song.Path), "%5C", "/"), "%3A", ":"), "string"
+      addKey fout, "Location", encodeLocation("file://localhost/" & Song.Path), "string"
 
       ' TODO artwork?
       ' addKey fout, "Artwork Count", 0, "integer"
       ' TODO convert to iTunes rating range. MM: -99999...?. iTunes: -255 (silent) .. 255
-      ' fout.WriteLine "         <key>Volume Adjustment</key><integer>" & escapeXML(Song.Leveling) & "</integer>" 
+      ' fout.WriteLine "            <key>Volume Adjustment</key><integer>" & escapeXML(Song.Leveling) & "</integer>" 
 
       ' Fields not available in MM:
-      ' fout.WriteLine "         <key>Disc Count</key><integer>" & escapeXML(Song.?) & "</integer>"
-      ' fout.WriteLine "         <key>Album Rating</key><integer>" & escapeXML(Song.?) & "</integer>"
-      ' fout.WriteLine "         <key>Persistent ID</key><string>5282DFDE369975A8</string>"
+      ' fout.WriteLine "            <key>Disc Count</key><integer>" & escapeXML(Song.?) & "</integer>"
+      ' fout.WriteLine "            <key>Album Rating</key><integer>" & escapeXML(Song.?) & "</integer>"
+      ' fout.WriteLine "            <key>Persistent ID</key><string>5282DFDE369975A8</string>"
 
-      fout.WriteLine "      </dict>"
+      fout.WriteLine "        </dict>"
 
       Progress.Increase
     wend
-    fout.WriteLine "   </dict>"
+    fout.WriteLine "    </dict>"
   end if
   SDB.ProcessMessages
   
@@ -239,8 +288,8 @@ sub export
   ' e.g. randomized or size-limited playlists will contain a static snapshot taken
   ' at export time.
   if playlistCount > 0 and not Progress.Terminate and not Script.Terminate then
-    fout.WriteLine "   <key>Playlists</key>"
-    fout.WriteLine "   <array>"
+    fout.WriteLine "    <key>Playlists</key>"
+    fout.WriteLine "    <array>"
     
     ' Get playlists and store them into an array. Make sure that we do not have
     ' an open query while playlist.Tracks is evaluated because that will fail
@@ -266,7 +315,7 @@ sub export
       progress.Text = progressText & " " & SDB.LocalizedFormat("playlist ""%s"" (%s songs)", playlist.Title, CStr(tracks.Count), 0)
       SDB.ProcessMessages
 
-      fout.WriteLine "      <dict>"
+      fout.WriteLine "        <dict>"
       addKey fout, "Name", escapeXML(playlist.Title), "string"
       ' Apparently only used for "Library" playlist:
       ' addKey fout, "Master", Nothing, "true"
@@ -274,25 +323,25 @@ sub export
       addKey fout, "Playlist ID", playlist.ID, "integer"
       ' No MM field for this:
       ' addKey fout, "Playlist Persistent ID", "4A9134D6F6425130", "string"
-      fout.WriteLine "         <key>All Items</key><true/>"
+      fout.WriteLine "            <key>All Items</key><true/>"
       if tracks.Count > 0 then      
-        fout.WriteLine "         <key>Playlist Items</key>"
-        fout.WriteLine "         <array>"
+        fout.WriteLine "            <key>Playlist Items</key>"
+        fout.WriteLine "            <array>"
         for j = 0 to tracks.Count - 1
-          fout.WriteLine "            <dict>"
-          fout.WriteLine "               <key>Track ID</key><integer>" & tracks.Item(j).ID & "</integer>"
-          fout.WriteLine "            </dict>"
+          fout.WriteLine "                <dict>"
+          fout.WriteLine "                    <key>Track ID</key><integer>" & tracks.Item(j).ID & "</integer>"
+          fout.WriteLine "                </dict>"
         next 
-        fout.WriteLine "         </array>"
+        fout.WriteLine "            </array>"
       end if
-      fout.WriteLine "      </dict>"
+      fout.WriteLine "        </dict>"
             
       progress.Value = progress.Value + 50
       if Progress.Terminate or Script.Terminate then
         exit for
       end if
     next 
-    fout.WriteLine "   </array>"
+    fout.WriteLine "    </array>"
   end if
   
   fout.WriteLine "</dict>"
