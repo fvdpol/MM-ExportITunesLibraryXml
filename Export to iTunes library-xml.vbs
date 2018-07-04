@@ -7,12 +7,13 @@
 ' 1.0   initial version
 ' 1.1   options added for disabling timer and showing a file selection dialog
 ' 1.2   fixed: unicode characters (e.g. Chinese) were encoded different than iTunes does
+' 1.3   fixed: handling of & and # in URI encoding, added Last Played
 
 option explicit     ' report undefined variables, ...
 
 ' Customize options below; then (re)start MM.
-const ENABLE_TIMER = true ' change to false to prevent automatic exporting once per hour
-const QUERY_FOLDER = false ' set tp true to be asked each time where to save the iTunes xml file
+const ENABLE_TIMER = false ' change to false to prevent automatic exporting once per hour
+const QUERY_FOLDER = false ' set to true to be asked each time where to save the iTunes xml file
 
 ' End of options.
 
@@ -30,7 +31,9 @@ function encodeLocation(location)
   end if
 
   location = replace(location, "\", "/")
+  location = replace(location, "&", "&")
   encodeLocation = scriptControl.Run("encodeURI", location)
+  encodeLocation = replace(encodeLocation, "#", "%23")
 end function
 
 ' Returns UTF8 equivalent string of the provided Unicode codepoint c.
@@ -246,6 +249,7 @@ sub export
       addKey fout, "Year", Song.Year, "integer"
       addKey fout, "Date Modified", Song.FileModified, "date"
       addKey fout, "Date Added", Song.DateAdded, "date"
+      addKey fout, "Play Date UTC", Song.LastPlayed, "date"
       addKey fout, "Bit Rate", Int(Song.Bitrate / 1000), "integer"
       addKey fout, "Sample Rate", Song.SampleRate, "integer"
       addKey fout, "Track Type", escapeXML("File"), "string"
