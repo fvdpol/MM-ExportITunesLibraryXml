@@ -8,6 +8,7 @@
 ' 1.1   options added for disabling timer and showing a file selection dialog
 ' 1.2   fixed: unicode characters (e.g. Chinese) were encoded different than iTunes does
 ' 1.3   fixed: handling of & and # in URI encoding, added Last Played
+' & not allowed in fields, escape as &#38;
 
 option explicit     ' report undefined variables, ...
 
@@ -62,6 +63,8 @@ end function
 ' Export.vbs, but fixes a unicode issue and is probably faster.
 ' Note that a bug in AscW still prevents the correct handling of unicode
 ' codepoints > 65535.
+'
+' added escaping of xml special characters as per original itunes and required by Traktor parser
 function escapeXML(srcstring)
   dim i, codepoint, currentchar, replacement
   i = 1
@@ -69,11 +72,15 @@ function escapeXML(srcstring)
     currentchar = mid(srcstring, i, 1)
     replacement = null
     if currentchar = "&" then
-      replacement = "&"
+      replacement = "&#38;"
     elseif currentchar = "<" then
-      replacement = "<"
+      replacement = "&#60;"
     elseif currentchar = ">" then
-      replacement = ">"
+      replacement = "&#62;"
+    elseif currentchar =  CHR(34) then
+      replacement = "&#34;"
+    elseif currentchar = "'" then
+      replacement = "&#39;"
     else
       codepoint = AscW(currentchar)
       if codepoint < 0 then ' adjust for negative (incorrect) values, see also http://support.microsoft.com/kb/272138
@@ -259,7 +266,9 @@ sub export
       
       ' 10.10.2010: fixed: location was not correctly URI encoded before
       ' addKey fout, "Location", "file://localhost/" & Replace(Replace(Escape(Song.Path), "%5C", "/"), "%3A", ":"), "string"
-      addKey fout, "Location", encodeLocation("file://localhost/" & Song.Path), "string"
+      ' addKey fout, "Location", encodeLocation("file://localhost/" & Song.Path), "string"
+      ' 04.07.2018: amparsant needs to be escaped
+      addKey fout, "Location", Replace(encodeLocation("file://localhost/" & Song.Path),"&","&#38;"), "string"
 
       ' TODO artwork?
       ' addKey fout, "Artwork Count", 0, "integer"
