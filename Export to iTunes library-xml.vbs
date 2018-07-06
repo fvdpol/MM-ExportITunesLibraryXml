@@ -9,12 +9,14 @@
 ' 1.2   fixed: unicode characters (e.g. Chinese) were encoded different than iTunes does
 ' 1.3   fixed: handling of & and # in URI encoding, added Last Played
 ' 1.4   fixed: Traktor failing import due to invalid characters in xml (& -> &#38;)
+' 1.5   added BPM field, Added forced export on shutdown (Matthias, 12.12.2012)
 
 option explicit     ' report undefined variables, ...
 
 ' Customize options below; then (re)start MM.
 const ENABLE_TIMER = false ' change to false to prevent automatic exporting once per hour
 const QUERY_FOLDER = false ' set to true to be asked each time where to save the iTunes xml file
+const SHUTDOWN_EXPORT = false 'True: Export to lib on shutdown of MM. False: No action on shutdown
 
 ' End of options.
 
@@ -172,7 +174,7 @@ end function
 ' library.xml. This is not intended to make MM's database available to
 ' iTunes itself but to provide a bridge to other applications which are
 ' able to read the iTunes library xml.
-sub export
+sub Export
   if SDB.Objects(EXPORTING) is nothing then
     SDB.Objects(EXPORTING) = SDB
   else
@@ -371,17 +373,23 @@ sub export
   SDB.Objects(EXPORTING) = nothing
 end sub
 
-sub timedExport(exportTimer)
+
+sub forcedExport()
   if SDB.Objects(EXPORTING) is nothing then
-    export
+    Call Export
   end if
 end sub
+
 
 ' Called when MM starts up, installs a timer to export the data
 ' frequently to the iTunes library.xml.
 sub OnStartup
   if ENABLE_TIMER then
     dim exportTimer : set exportTimer = SDB.CreateTimer(3600000) ' export every 60 minutes
-    Script.RegisterEvent exportTimer, "OnTimer", "timedExport"
+    Script.RegisterEvent exportTimer, "OnTimer", "forcedExport"
   end if
+
+  if SHUTDOWN_EXPORT then
+    Script.RegisterEvent SDB,"OnShutdown","forcedExport"
+  end if 
 end sub
