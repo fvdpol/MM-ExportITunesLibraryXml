@@ -4,7 +4,7 @@
 ' http://www.mediamonkey.com/forum/viewtopic.php?f=2&t=31680
 '
 ' Change history:
-' 1.0   initial version (by "DC")
+' 1.0   initial version by "DC"
 ' 1.1   options added for disabling timer and showing a file selection dialog
 ' 1.2   fixed: unicode characters (e.g. Chinese) were encoded different than iTunes does
 ' 1.3   fixed: handling of & and # in URI encoding, added Last Played
@@ -263,6 +263,7 @@ sub export
       addKey fout, "File Folder Count", -1, "integer"
       addKey fout, "Library Folder Count", -1, "integer"
       addKey fout, "Comments", escapeXML(Song.Comment), "string"
+      addKey fout, "BPM", Song.BPM, "string"
       
       ' 10.10.2010: fixed: location was not correctly URI encoded before
       ' addKey fout, "Location", "file://localhost/" & Replace(Replace(Escape(Song.Path), "%5C", "/"), "%3A", ":"), "string"
