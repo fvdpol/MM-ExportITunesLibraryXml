@@ -1,12 +1,21 @@
 # MediaMonkey Export to iTunes library.xml
 
 
+
 Based on the original script posted by "DC" on the MediaMonkey forum to export to SqueezeCenter:
 
 http://www.mediamonkey.com/forum/viewtopic.php?f=2&t=31680
 
 
 My primary use-case for this script is to export the MediaMonkey library/playlists for use in Native Instruments TraktorDJ
+
+
+Tested:
+
+| Software                      | Version   | OS          | Note                                                                    |
+|-------------------------------|-----------|-------------|---------------------------------------------------------------|
+| Native Instruments Traktor DJ | 2.11.3 17 | Windows 10  | OK                                                                      |
+| Native Instruments Traktor DJ | 2.11.3.17 | MacOS       | tracks / playlists read OK, file location needs to be updated/remapped |
 
 
 ## Installation
@@ -28,12 +37,29 @@ ScriptType=1
 
 ## History
 
+Version 1.0
 Script Original Version; by DC posted Wed Aug 06, 2008 3:01 pm
 http://www.mediamonkey.com/forum/viewtopic.php?f=2&t=31680#p162175
 
+Version 1.2
 Update for Unicode ; by DC posted Sun Oct 10, 2010 6:21 pm
 http://www.mediamonkey.com/forum/viewtopic.php?f=2&t=31680&start=60#p272344
 
+
+Version 1.3
+Fixed URI encoding, added Last Player; by VariableFlame posted Sun Jan 07, 2018 5:10 pm
+http://www.mediamonkey.com/forum/viewtopic.php?f=2&t=31680&start=75#p441991
+
+
+Version 1.4
+Fixed: Traktor failing import due to invalid characters in xml (& -> &#38;); fvdpol, July 4 2018
+
+
+
+
+## Other Changes
+
+Other updates found on the Media Monkey Forum; to be integrated
 
 Update to add BPM field for Traktor; by Rhashime posted Sat Dec 24, 2011 12:14 pm
 http://www.mediamonkey.com/forum/viewtopic.php?f=2&t=31680&start=60#p324753
