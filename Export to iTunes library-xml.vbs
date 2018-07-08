@@ -9,7 +9,8 @@
 ' 1.2   fixed: unicode characters (e.g. Chinese) were encoded different than iTunes does
 ' 1.3   fixed: handling of & and # in URI encoding, added Last Played
 ' 1.4   fixed: Traktor failing import due to invalid characters in xml (& -> &#38;)
-' 1.5   added BPM field, Added forced export on shutdown (Matthias, 12.12.2012)
+' 1.5   added BPM field, added forced export on shutdown (Matthias, 12.12.2012)
+'       added child-playlists (Matthias, 12.12.2012)
 
 option explicit     ' report undefined variables, ...
 
