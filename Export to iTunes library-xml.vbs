@@ -170,6 +170,30 @@ function getExportFilename()
   getExportFilename = path + "iTunes Music Library.xml"
 end function
 
+' MM stores childplaylists, while iTunes XML stores parent playlist
+' This function gets the parent playlist (if existent) 
+' Added 12.12.2012 by Matthias 
+function getparentID(playlist)
+	Dim childID, childItems, i, iter
+	childID = playlist.ID
+    set iter = SDB.Database.OpenSQL("select PlaylistName from PLAYLISTS")
+    while not iter.EOF 
+		if playlist.Title <> "Accessible Tracks" then ' this would correspond to iTunes' "Library" playlist
+			Set childItems = SDB.PlaylistByTitle(iter.StringByIndex(0)).ChildPlaylists
+			For i=0 To childItems.Count-1
+				if childItems.Item(i).ID = childID then  
+					getparentID = SDB.PlaylistByTitle(iter.StringByIndex(0)).ID
+					exit function
+				end if 
+			next
+		end if
+      iter.next
+    wend      
+    set iter = nothing
+	getparentID = 0 
+end function
+
+
 ' Exports the full MM library and playlists into an iTunes compatible
 ' library.xml. This is not intended to make MM's database available to
 ' iTunes itself but to provide a bridge to other applications which are
@@ -325,6 +349,8 @@ sub Export
     set iter = nothing
 
     for each playlist in playlists
+	    dim parentID
+	    parentID = getparentID(playlist)
       set tracks = playlist.Tracks
       ' %d always inserts 0, don't know why
       i = i + 1
@@ -338,8 +364,12 @@ sub Export
       ' addKey fout, "Visible", Nothing, "empty"
       addKey fout, "Playlist ID", playlist.ID, "integer"
       ' No MM field for this:
-      ' addKey fout, "Playlist Persistent ID", "4A9134D6F6425130", "string"
-      fout.WriteLine "            <key>All Items</key><true/>"
+      
+	  addKey fout, "Playlist Persistent ID", playlist.ID, "string"
+	  if parentID <> 0 then
+		  addKey fout, "Parent Persistent ID", parentID, "string"
+	  end if 
+      fout.WriteLine "         <key>All Items</key><true/>"
       if tracks.Count > 0 then      
         fout.WriteLine "            <key>Playlist Items</key>"
         fout.WriteLine "            <array>"
