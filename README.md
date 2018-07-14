@@ -14,6 +14,7 @@ Tested:
 
 | Software                      | Version   | OS          | Note                                                                    |
 |-------------------------------|-----------|-------------|---------------------------------------------------------------|
+| Media Monkey Gold             | 4.1.20.1864 | Windows 10 | OK                                                                     |
 | Native Instruments Traktor DJ | 2.11.3 17 | Windows 10  | OK                                                                      |
 | Native Instruments Traktor DJ | 2.11.3.17 | MacOS       | tracks / playlists read OK, file location needs to be updated/remapped |
 
