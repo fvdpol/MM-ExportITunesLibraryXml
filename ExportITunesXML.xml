@@ -1,0 +1,8 @@
+<!- pointer to latest stable release of ExportITunesXML for automatic update by Media Monkey-->
+<SoftwareVersion>
+ <VersionMajor>1</VersionMajor>
+ <VersionMinor>6</VersionMinor>
+ <VersionRelease>0</VersionRelease>
+ <VersionBuild>0</VersionBuild>
+ <UpdateURL>https://github.com/fvdpol/MM-ExportITunesLibraryXml/releases/download/v1.6/ExportITunesXML.mmip</UpdateURL>
+</SoftwareVersion>

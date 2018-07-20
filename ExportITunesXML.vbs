@@ -11,6 +11,7 @@
 ' 1.4   fixed: Traktor failing import due to invalid characters in xml (& -> &#38;)
 ' 1.5   added BPM field, added forced export on shutdown (Matthias, 12.12.2012)
 '       added child-playlists (Matthias, 12.12.2012)
+' 1.6   migrate from report to MediaMonkey plugin with MMIP installer
 
 option explicit     ' report undefined variables, ...
 
@@ -412,9 +413,36 @@ sub forcedExport()
 end sub
 
 
+sub ExportITunesXML()
+  if SDB.Objects(EXPORTING) is nothing then
+    Call Export
+  end if
+end sub
+
+
+Sub OnToolbar(btn)
+  if SDB.Objects(EXPORTING) is nothing then
+    Call Export
+  end if
+End Sub
+
+
 ' Called when MM starts up, installs a timer to export the data
 ' frequently to the iTunes library.xml.
 sub OnStartup
+  Dim btn : Set btn = SDB.Objects("PlaylistFTPButton")
+  If btn Is Nothing Then
+    Set btn = SDB.UI.AddMenuItem(SDB.UI.Menu_TbStandard,0,0) 
+    btn.Caption = "ExportITunesXMLBB"
+    btn.Hint = "Exports all tracks and playlists to an iTunes library.xml file"
+    btn.IconIndex = 56
+    btn.Visible = True
+    Set SDB.Objects("ExportITunesXMLButton") = btn    
+  End If
+  Call Script.UnRegisterHandler("OnToolbar")
+  Call Script.RegisterEvent(btn,"OnClick","OnToolbar")
+'  Call SDB.UI.AddOptionSheet("PlaylistFTP Settings",Script.ScriptPath,"InitSheet","SaveSheet",-2)  
+  
   if ENABLE_TIMER then
     dim exportTimer : set exportTimer = SDB.CreateTimer(3600000) ' export every 60 minutes
     Script.RegisterEvent exportTimer, "OnTimer", "forcedExport"
@@ -424,3 +452,22 @@ sub OnStartup
     Script.RegisterEvent SDB,"OnShutdown","forcedExport"
   end if 
 end sub
+
+
+Sub OnInstall()
+  'Add entries to script.ini if you need to show up in the Scripts menu
+  Dim inip : inip = SDB.ScriptsPath & "Scripts.ini"
+  Dim inif : Set inif = SDB.Tools.IniFileByPath(inip)
+  If Not (inif Is Nothing) Then
+    inif.StringValue("PlaylistFTP","Filename") = "ExportITunesXML.vbs"
+    inif.StringValue("PlaylistFTP","Procname") = "ExportITunesXML"
+    inif.StringValue("PlaylistFTP","Order") = "10"
+    inif.StringValue("PlaylistFTP","DisplayName") = "Export to iTunes XML"
+    inif.StringValue("PlaylistFTP","Description") = "Exports all tracks and playlists to an iTunes library.xml file"
+    inif.StringValue("PlaylistFTP","Language") = "VBScript"
+    inif.StringValue("PlaylistFTP","ScriptType") = "0"	
+	'inif.StringValue("PlaylistFTP","Shortcut") = "Ctrl+i"
+    SDB.RefreshScriptItems
+  End If
+  Call OnStartup()
+End Sub
