@@ -1,6 +1,6 @@
 
-
-del ExportITunesXML.MMIP
-zip ExportITunesXML.MMIP App.ico Install.ini Uninstall.ini ExportITunesXML.vbs
+del ExportITunesXML.mmip
+zip ExportITunesXML.mmip App.ico Install.ini Uninstall.ini ExportITunesXML.vbs
+copy ExportITunesXML.mmip ExportITunesXML_v1.6.mmip 
 
 

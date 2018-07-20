@@ -11,6 +11,7 @@
 ' 1.4   fixed: Traktor failing import due to invalid characters in xml (& -> &#38;)
 ' 1.5   added BPM field, added forced export on shutdown (Matthias, 12.12.2012)
 '       added child-playlists (Matthias, 12.12.2012)
+' 1.6   migrate from report to MediaMonkey plugin with MMIP installer
 
 option explicit     ' report undefined variables, ...
 
@@ -411,12 +412,12 @@ sub forcedExport()
   end if
 end sub
 
+
 sub ExportITunesXML()
   if SDB.Objects(EXPORTING) is nothing then
     Call Export
   end if
 end sub
-
 
 
 Sub OnToolbar(btn)
@@ -441,7 +442,6 @@ sub OnStartup
   Call Script.UnRegisterHandler("OnToolbar")
   Call Script.RegisterEvent(btn,"OnClick","OnToolbar")
 '  Call SDB.UI.AddOptionSheet("PlaylistFTP Settings",Script.ScriptPath,"InitSheet","SaveSheet",-2)  
-
   
   if ENABLE_TIMER then
     dim exportTimer : set exportTimer = SDB.CreateTimer(3600000) ' export every 60 minutes
@@ -452,7 +452,6 @@ sub OnStartup
     Script.RegisterEvent SDB,"OnShutdown","forcedExport"
   end if 
 end sub
-
 
 
 Sub OnInstall()
@@ -472,18 +471,3 @@ Sub OnInstall()
   End If
   Call OnStartup()
 End Sub
-
-'Sub OnStartup()  
-'  Dim btn : Set btn = SDB.Objects("PlaylistFTPButton")
-'  If btn Is Nothing Then
-'    Set btn = SDB.UI.AddMenuItem(SDB.UI.Menu_TbStandard,0,0) 
-'    btn.Caption = "PlaylistFTP"
-'    btn.Hint = "Uploads playlists via FTP"
-'    btn.IconIndex = 56
-'    btn.Visible = True
-'    Set SDB.Objects("PlaylistFTPButton") = btn    
-'  End If
-'  Call Script.UnRegisterHandler("OnToolbar")
-'  Call Script.RegisterEvent(btn,"OnClick","OnToolbar")
-'  Call SDB.UI.AddOptionSheet("PlaylistFTP Settings",Script.ScriptPath,"InitSheet","SaveSheet",-2)  
-'End Sub
