@@ -2,3 +2,4 @@
 *.lnk
 CopyToMMFolder.cmd
 *.mmip
+*.exe
