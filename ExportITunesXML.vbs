@@ -52,20 +52,23 @@ function Utf8(ByVal c)
   if c < 128 then ' 1 byte utf-8
     Utf8 = chr(c)
   elseif c < 2048 then ' 2 byte utf-8
-    b1 = ((c / 2^6)  and &h1f&) or &hc0
-    b2 = ( c         and &h3f&) or &h80
-    Utf8 = chr(b1) & chr(b2) 
+    b1 = c mod 64
+    b2 = (c - b1) / 64
+    Utf8 = chr(&hc0 + b2) & chr(&h80 + b1)
+
   elseif c < 65536 Then ' 3 byte utf-8
-    b1 = ((c / 2^12) and &h0f&) or &he0
-    b2 = ((c / 2^6)  and &h3f&) or &h80
-    b3 = ( c         and &h3f&) or &h80
-    Utf8 = chr(b1) & chr(b2) & chr(b3)
+    b1 = c mod 64
+    b2 = ((c - b1) / 64) mod 64
+    b3 = (c - b1 - (64 * b2)) / 4096
+    Utf8 = chr(&he0 + b3) & chr(&h80 + b2) & chr(&h80 + b1)
+
   elseif c < &h10ffff& then ' 4 byte utf-8
-    b1 = ((c / 2^18) and &h07&) or &hf0
-    b2 = ((c / 2^12) and &h3f&) or &h80
-    b3 = ((c / 2^6)  and &h3f&) or &h80
-    b4 = ( c         and &h3f&) or &h80
-    Utf8 = chr(b1) & chr(b2) & chr(b3) & chr(b4)
+    b1 = c mod 64
+    b2 = ((c - b1) / 64 ) mod 64
+    b3 = ((c - b1 - (64 * b2)) / 4096) mod 64
+    b4 = ((c - b1 - (64 * b2) - (4096 * b3)) / 262144)
+    Utf8 = chr(&hf0 + b4) & chr(&h80 + b3) & chr(&h80 + b2) & chr(&h80 + b1)
+    
   else ' error - use replacement character
     Utf8 = chr(&hef) & chr(&hbf) & chr(&hdb)
   end if
