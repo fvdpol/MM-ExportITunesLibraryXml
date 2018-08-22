@@ -12,6 +12,7 @@
 ' 1.5   added BPM field, added forced export on shutdown (Matthias, 12.12.2012)
 '       added child-playlists (Matthias, 12.12.2012)
 ' 1.6   migrate from report to MediaMonkey plugin with MMIP installer
+' 1.6.1 improve unicode utf-8 output; add handling of utf-16 surrogate pairs
 
 option explicit     ' report undefined variables, ...
 
@@ -47,18 +48,26 @@ end function
 ' Function by "Arnout", copied from this stackoverflow question:
 ' http://stackoverflow.com/questions/378850/utf-8-file-appending-in-vbscript-classicasp-can-it-be-done
 function Utf8(ByVal c)
-  dim b1, b2, b3
-  if c < 128 then
+  dim b1, b2, b3, b4
+  if c < 128 then ' 1 byte utf-8
     Utf8 = chr(c)
-  elseif c < 2048 then
-    b1 = c mod 64
-    b2 = (c - b1) / 64
-    Utf8 = chr(&hc0 + b2) & chr(&h80 + b1)
-  elseif c < 65536 then
-    b1 = c mod 64
-    b2 = ((c - b1) / 64) mod 64
-    b3 = (c - b1 - (64 * b2)) / 4096
-    Utf8 = chr(&he0 + b3) & chr(&h80 + b2) & chr(&h80 + b1)
+  elseif c < 2048 then ' 2 byte utf-8
+    b1 = ((c / 2^6)  and &h1f&) or &hc0
+    b2 = ( c         and &h3f&) or &h80
+    Utf8 = chr(b1) & chr(b2) 
+  elseif c < 65536 Then ' 3 byte utf-8
+    b1 = ((c / 2^12) and &h0f&) or &he0
+    b2 = ((c / 2^6)  and &h3f&) or &h80
+    b3 = ( c         and &h3f&) or &h80
+    Utf8 = chr(b1) & chr(b2) & chr(b3)
+  elseif c < &h10ffff& then ' 4 byte utf-8
+    b1 = ((c / 2^18) and &h07&) or &hf0
+    b2 = ((c / 2^12) and &h3f&) or &h80
+    b3 = ((c / 2^6)  and &h3f&) or &h80
+    b4 = ( c         and &h3f&) or &h80
+    Utf8 = chr(b1) & chr(b2) & chr(b3) & chr(b4)
+  else ' error - use replacement character
+    Utf8 = chr(&hef) & chr(&hbf) & chr(&hdb)
   end if
 end function
 
@@ -83,17 +92,21 @@ function escapeXML(srcstring)
       replacement = "&#62;"
     elseif currentchar =  CHR(34) then
       replacement = "&#34;"
-    elseif currentchar = "'" then
-      replacement = "&#39;"
     else
-      codepoint = AscW(currentchar)
-      if codepoint < 0 then ' adjust for negative (incorrect) values, see also http://support.microsoft.com/kb/272138
-        codepoint = codepoint + 65536
+      codepoint = (AscW(currentchar) And &hffff&)
+
+      ' Handle surrogate pairs; see https://unicodebook.readthedocs.io/unicode_encodings.html#utf-16-surrogate-pairs
+      if codepoint >= &hd800& and codepoint <= &hdbff& then
+        dim codepoint2 ' for lower-pair
+        codepoint2 = (AscW(mid(srcstring, i+1, 1)) And &hffff&)
+        codepoint = &h10000& + Clng((codepoint and &h3ff) * 1024) + Clng(codepoint2 and &h3ff)
+
+        ' remove the 2nd code (lower-pair) from the string
+        srcstring = mid(srcstring, 1, i)  + Mid(srcstring, i + 2, Len(srcstring))
       end if
       
       ' Important: reject control characters except tab, cr, lf. See also http://www.w3.org/TR/1998/REC-xml-19980210.html#NT-Char
       if codepoint > 127 or currentchar = vbTab or currentchar = vbLf or currentchar = vbCr then
-        ' replacement = "&#" + CStr(codepoint) + ";"
         replacement = Utf8(codepoint)
       elseif codepoint < 32 then
         replacement = ""
