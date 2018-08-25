@@ -17,7 +17,7 @@ Tested:
 | Media Monkey Gold             | 4.1.20.1864 4.1.21.1875 | Windows 10 | OK                                                                     |
 | Native Instruments Traktor DJ | 2.11.3.17 | Windows 10  | OK                                                                      |
 | Native Instruments Traktor DJ | 2.11.3.17 | MacOS Sierra | tracks / playlists read OK, file location needs to be updated/remapped |
-| Mixx                          | 2.0.0 x64 | Windows 10  | OK |
+| Mixx                          | 2.0.0 x64 2.1.3 x64 | Windows 10  | OK |
 | Mixx                          | 2.1.1 x64 | Windows 10  | NOK - Tracks read OK; only 5 or so playlists shown | 
 | Virtual DJ                    | 8.3 b4459 (2018) | Windows 10 | OK |
 | Serato                        | TBD |              | Unknown, feedback wanted   |
