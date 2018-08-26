@@ -39,6 +39,10 @@ Default file location for the generated "iTunes Music Library.xml" file is in sa
 
 ## History
 
+### Version 1.7
+- Added Options dialog
+
+
 ### Version 1.6.1
 - Improved utf-8 unicode handling; support for utf-16 surrogate pairs
 

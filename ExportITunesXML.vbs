@@ -13,6 +13,7 @@
 '       added child-playlists (Matthias, 12.12.2012)
 ' 1.6   migrate from report to MediaMonkey plugin with MMIP installer
 ' 1.6.1 improve unicode utf-8 output; add handling of utf-16 surrogate pairs
+' 1.7.0 added Options dialog. 
 
 option explicit     ' report undefined variables, ...
 
@@ -446,18 +447,19 @@ End Sub
 ' Called when MM starts up, installs a timer to export the data
 ' frequently to the iTunes library.xml.
 sub OnStartup
-  Dim btn : Set btn = SDB.Objects("PlaylistFTPButton")
+  Dim btn : Set btn = SDB.Objects("ExportITunesXMLButton")
   If btn Is Nothing Then
     Set btn = SDB.UI.AddMenuItem(SDB.UI.Menu_TbStandard,0,0) 
     btn.Caption = "ExportITunesXMLBB"
-    btn.Hint = "Exports all tracks and playlists to an iTunes library.xml file"
+    btn.Hint = "Exports all tracks and playlists to an iTunes Music Library.xml file"
     btn.IconIndex = 56
     btn.Visible = True
     Set SDB.Objects("ExportITunesXMLButton") = btn    
   End If
   Call Script.UnRegisterHandler("OnToolbar")
   Call Script.RegisterEvent(btn,"OnClick","OnToolbar")
-'  Call SDB.UI.AddOptionSheet("PlaylistFTP Settings",Script.ScriptPath,"InitSheet","SaveSheet",-2)  
+  ' Option sheet "Library" := -3
+  Call SDB.UI.AddOptionSheet("Export iTunes XML Settings",Script.ScriptPath,"InitSheet","SaveSheet",-3)  
   
   if ENABLE_TIMER then
     dim exportTimer : set exportTimer = SDB.CreateTimer(3600000) ' export every 60 minutes
@@ -475,15 +477,113 @@ Sub OnInstall()
   Dim inip : inip = SDB.ScriptsPath & "Scripts.ini"
   Dim inif : Set inif = SDB.Tools.IniFileByPath(inip)
   If Not (inif Is Nothing) Then
-    inif.StringValue("PlaylistFTP","Filename") = "ExportITunesXML.vbs"
-    inif.StringValue("PlaylistFTP","Procname") = "ExportITunesXML"
-    inif.StringValue("PlaylistFTP","Order") = "10"
-    inif.StringValue("PlaylistFTP","DisplayName") = "Export to iTunes XML"
-    inif.StringValue("PlaylistFTP","Description") = "Exports all tracks and playlists to an iTunes library.xml file"
-    inif.StringValue("PlaylistFTP","Language") = "VBScript"
-    inif.StringValue("PlaylistFTP","ScriptType") = "0"	
-	'inif.StringValue("PlaylistFTP","Shortcut") = "Ctrl+i"
+    inif.StringValue("ExportITunesXML","Filename") = "ExportITunesXML.vbs"
+    inif.StringValue("ExportITunesXML","Procname") = "ExportITunesXML"
+    inif.StringValue("ExportITunesXML","Order") = "10"
+    inif.StringValue("ExportITunesXML","DisplayName") = "Export to iTunes XML"
+    inif.StringValue("ExportITunesXML","Description") = "Exports all tracks and playlists to an iTunes library.xml file"
+    inif.StringValue("ExportITunesXML","Language") = "VBScript"
+    inif.StringValue("ExportITunesXML","ScriptType") = "0"	
+	  'inif.StringValue("ExportITunesXML","Shortcut") = "Ctrl+i"
     SDB.RefreshScriptItems
   End If
   Call OnStartup()
+End Sub
+
+
+Sub InitSheet(Sheet)
+  Dim ini : Set ini = SDB.IniFile  
+  Dim ui : Set ui = SDB.UI
+  'Dim i : i = 0
+
+	Dim GroupBox0
+	Set GroupBox0 = UI.NewGroupBox(Sheet)
+	GroupBox0.Caption = "Settings for iTunesXML Export"
+	GroupBox0.Common.SetRect 10, 10, 500, 250
+
+  Dim edt
+  Dim y : y = 25
+
+  Set edt = ui.NewLabel(GroupBox0)
+  edt.Common.SetRect 20, y, 100, 20
+  edt.Caption = "Export at shutdown:"
+  edt.Autosize = False
+  edt.Common.Hint = "If option is set the iTunes library xml will be exported when MediaMonkey is closed."
+  
+  Set edt = ui.NewCheckBox(GroupBox0)
+  edt.Common.SetRect 120, y-3, 200, 20
+  edt.Common.ControlName = "NPExportShutdown"
+  'edt.Text = ini.StringValue("ExportITunesXML","Site")
+  edt.common.Enabled = False ' not yet implemented >> deactivate this control
+  y = y + 25
+
+  Set edt = ui.NewLabel(GroupBox0)
+  edt.Common.SetRect 20, y, 100, 20
+  edt.Caption = "Periodic Export:"
+  edt.Autosize = False
+  edt.Common.Hint = "If option is set the iTunes library xml will be exported every 60 minutes."
+  
+  Set edt = ui.NewCheckBox(GroupBox0)
+  edt.Common.SetRect 120, y-3, 200, 20
+  edt.Common.ControlName = "NPPeriodicExport"
+  'edt.Text = ini.StringValue("ExportITunesXML","Site")
+  edt.common.Enabled = False ' not yet implemented >> deactivate this control
+  y = y + 25
+
+  Set edt = ui.NewLabel(GroupBox0)
+  edt.Common.SetRect 20, y+3, 100, 20
+  edt.Caption = "Output Filename:"
+  edt.Autosize = False
+  edt.Common.Hint = "The file name for the iTunes Music Library XML file."
+  
+  Set edt = ui.NewEdit(GroupBox0)
+  edt.Common.SetRect 120, y, 455-120, 20
+  edt.Common.ControlName = "NPPath"
+  'edt.Text = ini.StringValue("ExportITunesXML","Path")    
+  edt.Text = "iTunes Music Library.xml"
+  edt.common.Enabled = False ' not yet implemented >> deactivate this control
+
+  'Set edt = ui.NewButton(GroupBox0)
+  'edt.Common.SetRect 460,y,20,20
+  'edt.Caption = "..."
+  'edt.Common.ControlName = "NPPathBrowser"    ' to open file browser.... 
+  y = y + 25
+
+
+
+
+  dim dbpath : dbpath = SDB.Database.Path
+  dim parts : parts = split(dbpath, "\")
+  dim dbfilename : dbfilename = parts(UBound(parts))
+  dim path : path = Mid(dbpath, 1, Len(dbpath) - Len(dbfilename))
+  
+  Set edt = ui.NewLabel(GroupBox0)
+  edt.Common.SetRect 20, y+3, 100, 20
+  edt.Caption = "Output Directory:"
+  edt.Autosize = False
+  edt.Common.Hint = "The directory where the iTunes Music Library XML file will be stored."
+  
+  Set edt = ui.NewEdit(GroupBox0)
+  edt.Common.SetRect 120, y, 455-120, 20
+  edt.Common.ControlName = "NPPath"
+  'edt.Text = ini.StringValue("ExportITunesXML","Path")    
+  edt.Text = path
+  edt.common.Enabled = False ' not yet implemented >> deactivate this control
+
+
+  Set edt = ui.NewButton(GroupBox0)
+  edt.Common.SetRect 460,y,20,20
+  edt.Caption = "..."
+  edt.Common.ControlName = "NPPathBrowser"    ' to open dir browser.... see getExportFilename()
+  edt.common.Enabled = False ' not yet implemented >> deactivate this control
+
+  y = y + 25
+
+End Sub
+
+Sub SaveSheet(Sheet)
+  Dim ini : Set ini = SDB.IniFile
+  'ini.StringValue("ExportITunesXML","Site") = Sheet.Common.ChildControl("NPSite").Text
+  'ini.StringValue("ExportITunesXML","User") = Sheet.Common.ChildControl("NPUser").Text
+  'ini.StringValue("ExportITunesXML","Path") = Sheet.Common.ChildControl("NPPath").Text
 End Sub
