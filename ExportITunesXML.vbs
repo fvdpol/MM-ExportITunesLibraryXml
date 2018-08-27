@@ -18,9 +18,9 @@
 option explicit     ' report undefined variables, ...
 
 ' Customize options below; then (re)start MM.
-const ENABLE_TIMER = false ' change to false to prevent automatic exporting once per hour
-const QUERY_FOLDER = false ' set to true to be asked each time where to save the iTunes xml file
-const SHUTDOWN_EXPORT = false 'True: Export to lib on shutdown of MM. False: No action on shutdown
+const ENABLE_TIMER = False ' change to false to prevent automatic exporting once per hour
+const QUERY_FOLDER = False ' set to true to be asked each time where to save the iTunes xml file
+const SHUTDOWN_EXPORT = False 'True: Export to lib on shutdown of MM. False: No action on shutdown
 
 ' End of options.
 
@@ -447,6 +447,9 @@ End Sub
 ' Called when MM starts up, installs a timer to export the data
 ' frequently to the iTunes library.xml.
 sub OnStartup
+
+  MsgBox "DBG: ExportITunesXML OnStartup called"
+
   Dim btn : Set btn = SDB.Objects("ExportITunesXMLButton")
   If btn Is Nothing Then
     Set btn = SDB.UI.AddMenuItem(SDB.UI.Menu_TbStandard,0,0) 
@@ -514,6 +517,7 @@ Sub InitSheet(Sheet)
   edt.Common.SetRect 120, y-3, 200, 20
   edt.Common.ControlName = "NPExportShutdown"
   'edt.Text = ini.StringValue("ExportITunesXML","Site")
+  edt.Checked = SHUTDOWN_EXPORT
   edt.common.Enabled = False ' not yet implemented >> deactivate this control
   y = y + 25
 
@@ -527,6 +531,7 @@ Sub InitSheet(Sheet)
   edt.Common.SetRect 120, y-3, 200, 20
   edt.Common.ControlName = "NPPeriodicExport"
   'edt.Text = ini.StringValue("ExportITunesXML","Site")
+  edt.Checked = ENABLE_TIMER
   edt.common.Enabled = False ' not yet implemented >> deactivate this control
   y = y + 25
 
