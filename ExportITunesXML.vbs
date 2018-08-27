@@ -462,7 +462,7 @@ sub OnStartup
   Call Script.UnRegisterHandler("OnToolbar")
   Call Script.RegisterEvent(btn,"OnClick","OnToolbar")
   ' Option sheet "Library" := -3
-  Call SDB.UI.AddOptionSheet("Export iTunes XML Settings",Script.ScriptPath,"InitSheet","SaveSheet",-3)  
+  Call SDB.UI.AddOptionSheet("Export to iTunes XML",Script.ScriptPath,"InitSheet","SaveSheet",-3)  
   
   if ENABLE_TIMER then
     dim exportTimer : set exportTimer = SDB.CreateTimer(3600000) ' export every 60 minutes
@@ -501,57 +501,63 @@ Sub InitSheet(Sheet)
 
 	Dim GroupBox0
 	Set GroupBox0 = UI.NewGroupBox(Sheet)
-	GroupBox0.Caption = "Settings for iTunesXML Export"
+	GroupBox0.Caption = "Export to iTunes XML Configuration"
 	GroupBox0.Common.SetRect 10, 10, 500, 250
 
   Dim edt
   Dim y : y = 25
 
-  Set edt = ui.NewLabel(GroupBox0)
-  edt.Common.SetRect 20, y, 100, 20
-  edt.Caption = "Export at shutdown:"
-  edt.Autosize = False
-  edt.Common.Hint = "If option is set the iTunes library xml will be exported when MediaMonkey is closed."
-  
-  Set edt = ui.NewCheckBox(GroupBox0)
-  edt.Common.SetRect 120, y-3, 200, 20
+
+Set edt = ui.NewCheckBox(GroupBox0)
+  edt.Common.SetRect 20, y-3, 20, 20
   edt.Common.ControlName = "NPExportShutdown"
   'edt.Text = ini.StringValue("ExportITunesXML","Site")
   edt.Checked = SHUTDOWN_EXPORT
   edt.common.Enabled = False ' not yet implemented >> deactivate this control
+  '
+  Set edt = ui.NewLabel(GroupBox0)
+  edt.Common.SetRect 40, y, 100, 20
+  edt.Caption = "Export at shutdown:"
+  edt.Autosize = False
+  edt.Common.Hint = "If option is set the iTunes library xml will be exported when MediaMonkey is closed."
+  '
   y = y + 25
 
-  Set edt = ui.NewLabel(GroupBox0)
-  edt.Common.SetRect 20, y, 100, 20
-  edt.Caption = "Periodic Export:"
-  edt.Autosize = False
-  edt.Common.Hint = "If option is set the iTunes library xml will be exported every 60 minutes."
-  
+
+
   Set edt = ui.NewCheckBox(GroupBox0)
-  edt.Common.SetRect 120, y-3, 200, 20
+  edt.Common.SetRect 20, y-3, 20, 20
   edt.Common.ControlName = "NPPeriodicExport"
   'edt.Text = ini.StringValue("ExportITunesXML","Site")
   edt.Checked = ENABLE_TIMER
   edt.common.Enabled = False ' not yet implemented >> deactivate this control
+  '
+  Set edt = ui.NewLabel(GroupBox0)
+  edt.Common.SetRect 40, y, 100, 20
+  edt.Caption = "Periodic Export:"
+  edt.Autosize = False
+  edt.Common.Hint = "If option is set the iTunes library xml will be exported every 60 minutes."
+  '
   y = y + 25
 
   Set edt = ui.NewLabel(GroupBox0)
   edt.Common.SetRect 20, y+3, 100, 20
-  edt.Caption = "Output Filename:"
+  edt.Caption = "Filename:"
   edt.Autosize = False
-  edt.Common.Hint = "The file name for the iTunes Music Library XML file."
-  
+  edt.Common.Hint = "The file name for the exported iTunes Music Library XML file."
+  '
   Set edt = ui.NewEdit(GroupBox0)
-  edt.Common.SetRect 120, y, 455-120, 20
+  edt.Common.SetRect 80, y, 455-80, 20
   edt.Common.ControlName = "NPPath"
   'edt.Text = ini.StringValue("ExportITunesXML","Path")    
   edt.Text = "iTunes Music Library.xml"
   edt.common.Enabled = False ' not yet implemented >> deactivate this control
-
+  '
   'Set edt = ui.NewButton(GroupBox0)
   'edt.Common.SetRect 460,y,20,20
   'edt.Caption = "..."
   'edt.Common.ControlName = "NPPathBrowser"    ' to open file browser.... 
+  '
   y = y + 25
 
 
@@ -564,17 +570,16 @@ Sub InitSheet(Sheet)
   
   Set edt = ui.NewLabel(GroupBox0)
   edt.Common.SetRect 20, y+3, 100, 20
-  edt.Caption = "Output Directory:"
+  edt.Caption = "Directory:"
   edt.Autosize = False
   edt.Common.Hint = "The directory where the iTunes Music Library XML file will be stored."
   
   Set edt = ui.NewEdit(GroupBox0)
-  edt.Common.SetRect 120, y, 455-120, 20
+  edt.Common.SetRect 80, y, 455-80, 20
   edt.Common.ControlName = "NPPath"
   'edt.Text = ini.StringValue("ExportITunesXML","Path")    
   edt.Text = path
   edt.common.Enabled = False ' not yet implemented >> deactivate this control
-
 
   Set edt = ui.NewButton(GroupBox0)
   edt.Common.SetRect 460,y,20,20
