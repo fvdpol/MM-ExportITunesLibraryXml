@@ -448,7 +448,7 @@ End Sub
 ' frequently to the iTunes library.xml.
 sub OnStartup
 
-  MsgBox "DBG: ExportITunesXML OnStartup called"
+  'MsgBox "DBG: ExportITunesXML OnStartup called"
 
   Dim btn : Set btn = SDB.Objects("ExportITunesXMLButton")
   If btn Is Nothing Then
@@ -480,7 +480,7 @@ Sub OnInstall()
   Dim inip : inip = SDB.ScriptsPath & "Scripts.ini"
   Dim inif : Set inif = SDB.Tools.IniFileByPath(inip)
   If Not (inif Is Nothing) Then
-    inif.StringValue("ExportITunesXML","Filename") = "ExportITunesXML.vbs"
+    inif.StringValue("ExportITunesXML","Filename") = "Auto\ExportITunesXML.vbs"
     inif.StringValue("ExportITunesXML","Procname") = "ExportITunesXML"
     inif.StringValue("ExportITunesXML","Order") = "10"
     inif.StringValue("ExportITunesXML","DisplayName") = "Export to iTunes XML"
