@@ -19,7 +19,7 @@ option explicit     ' report undefined variables, ...
 
 ' Customize options below; then (re)start MM.
 const ENABLE_TIMER = False ' change to false to prevent automatic exporting once per hour
-const QUERY_FOLDER = False ' set to true to be asked each time where to save the iTunes xml file
+'const QUERY_FOLDER = False ' set to true to be asked each time where to save the iTunes xml file
 const SHUTDOWN_EXPORT = False 'True: Export to lib on shutdown of MM. False: No action on shutdown
 
 ' End of options.
@@ -127,6 +127,90 @@ function escapeXML(srcstring)
   escapeXML = srcstring
 end function
 
+
+' Getter for the configured Directory
+function getDirectory()
+  ' FIXME - for now, simply return the default....
+    'edt.Text = ini.StringValue("ExportITunesXML","Directory")    
+  getDirectory = getDefaultDirectory()
+end function
+
+' Setter for the configured Filename
+sub setDirectory(byVal myDirectory)
+
+  ' FIXME
+  ' do so basic cleanup; ensure the path ends with a directory separator
+  if right(myDirectory,1) <> "\" then
+    ' simply append the missing separator
+    myDirectory = myDirectory & "\"
+  end if 
+
+  MsgBox "DBG setDirectory(): " & myDirectory
+
+
+  ' only store if valid!
+  ' Dim ini : Set ini = SDB.IniFile
+  'ini.StringValue("ExportITunesXML","Site") = Sheet.Common.ChildControl("NPSite").Text
+  'ini.StringValue("ExportITunesXML","User") = Sheet.Common.ChildControl("NPUser").Text
+  'ini.StringValue("ExportITunesXML","Path") = Sheet.Common.ChildControl("NPPath").Text
+
+end sub
+
+' Get default for the configured Directory
+function getDefaultDirectory()
+  ' The default file location will be in the same folder as the database 
+  ' because this folder is writable and user specific.
+  dim dbpath : dbpath = SDB.Database.Path
+  dim parts : parts = split(dbpath, "\")
+  dim dbfilename : dbfilename = parts(UBound(parts))
+  dim path : path = Mid(dbpath, 1, Len(dbpath) - Len(dbfilename))
+  getDefaultDirectory = path
+end function
+
+' Return true if the directory is valid and writable by the user
+function isValidDirectory(byVal myDirectory)
+  ' FIXME - for now, simply assume it is...
+  isValidDirectory = True
+end function 
+
+
+' Getter for the configured Filename
+function getFilename()
+  ' FIXME - for now, simply return the default...
+    ' edt.Text = ini.StringValue("ExportITunesXML","Filename")  
+  getFilename = getDefaultFilename()
+end function
+
+' Setter for the configured Filename
+sub setFilename(byVal myFilename)
+  ' FIXME
+
+  ' trim any unsupported characters:
+  myFilename = cleanFilename(myFilename)
+
+  MsgBox "DBG setFilename(): " & myFilename
+
+  ' only store if valid!
+
+end sub
+
+' Get default for the configured Directory
+function getDefaultFilename()
+  ' The default filename will be same as written by Apple iTunes
+  getDefaultFilename = "iTunes Music Library.xml"
+end function
+
+' remove invalid characters from the filename
+function cleanFilename(byVal myFilename)
+  Const sInvalidChars = "/\|<>:*?"""
+  Dim idx
+  for idx = 1 to Len(sInvalidChars)
+    myFilename = Replace(myFilename, Mid(sInvalidChars, idx, 1), "")
+  next
+ cleanFilename = myFilename
+End Function
+
+
 ' N must be numberic. Return value is N converted to a string, padded with
 ' a single "0" if N has only one digit.
 function LdgZ(N)    
@@ -166,27 +250,28 @@ end sub
 ' 29.03.2009: if the new option QUERY_FOLDER is set to true this function
 ' will query for the folder to save to instead.
 function getExportFilename()
-  dim path
-  if QUERY_FOLDER then
-    dim inif
-    set inif = SDB.IniFile
-    path = inif.StringValue("Scripts", "LastExportITunesXMLDir")
-    path = SDB.SelectFolder(path, SDB.Localize("Select where to export the iTunes XML file to."))
-    if path = "" then
-      exit function
-    end if
-    if right(path, 1) <> "\" then
-      path = path & "\"
-    end if
-    inif.StringValue("Scripts", "LastExportITunesXMLDir") = path
-    set inif = Nothing  
-  else
-    dim dbpath : dbpath = SDB.Database.Path
-    dim parts : parts = split(dbpath, "\")
-    dim dbfilename : dbfilename = parts(UBound(parts))
-    path = Mid(dbpath, 1, Len(dbpath) - Len(dbfilename))
-  end if
-  getExportFilename = path + "iTunes Music Library.xml"
+'  dim path
+'  if QUERY_FOLDER then
+'    dim inif
+'    set inif = SDB.IniFile
+'    path = inif.StringValue("Scripts", "LastExportITunesXMLDir")
+'    path = SDB.SelectFolder(path, SDB.Localize("Select where to export the iTunes XML file to."))
+'    if path = "" then
+'      exit function
+'    end if
+'    if right(path, 1) <> "\" then
+'      path = path & "\"
+'    end if
+'    inif.StringValue("Scripts", "LastExportITunesXMLDir") = path
+'    set inif = Nothing  
+'  else
+'    dim dbpath : dbpath = SDB.Database.Path
+'    dim parts : parts = split(dbpath, "\")
+'    dim dbfilename : dbfilename = parts(UBound(parts))
+'    path = Mid(dbpath, 1, Len(dbpath) - Len(dbfilename))
+'  end if
+'  getExportFilename = path + "iTunes Music Library.xml"
+  getExportFilename = getDirectory() + getFilename()
 end function
 
 ' MM stores childplaylists, while iTunes XML stores parent playlist
@@ -243,7 +328,7 @@ sub Export
   playlistCount = CInt(iter.ValueByIndex(0)) 
 
   set progress = SDB.Progress
-  progressText = SDB.Localize("Exporting to iTunes library.xml...")
+  progressText = SDB.Localize("Exporting to " & getFilename() & "...")
   Progress.Text = progressText
   Progress.MaxValue = songCount + playlistCount * 50
 
@@ -453,7 +538,7 @@ sub OnStartup
   Dim btn : Set btn = SDB.Objects("ExportITunesXMLButton")
   If btn Is Nothing Then
     Set btn = SDB.UI.AddMenuItem(SDB.UI.Menu_TbStandard,0,0) 
-    btn.Caption = "ExportITunesXMLBB"
+    btn.Caption = "ExportITunesXML"
     btn.Hint = "Exports all tracks and playlists to an iTunes Music Library.xml file"
     btn.IconIndex = 56
     btn.Visible = True
@@ -493,7 +578,7 @@ Sub OnInstall()
   Call OnStartup()
 End Sub
 
-
+' Callback to build the configuration dialog
 Sub InitSheet(Sheet)
   Dim ini : Set ini = SDB.IniFile  
   Dim ui : Set ui = SDB.UI
@@ -510,10 +595,9 @@ Sub InitSheet(Sheet)
 
 Set edt = ui.NewCheckBox(GroupBox0)
   edt.Common.SetRect 20, y-3, 20, 20
-  edt.Common.ControlName = "NPExportShutdown"
-  'edt.Text = ini.StringValue("ExportITunesXML","Site")
-  edt.Checked = SHUTDOWN_EXPORT
-  edt.common.Enabled = False ' not yet implemented >> deactivate this control
+  edt.Common.ControlName = "EITX_ExportAtShutdown"
+    edt.Checked = SHUTDOWN_EXPORT
+  edt.common.Enabled = False ' dynamic changing not yet implemented >> deactivate this control and simply show the configured value
   '
   Set edt = ui.NewLabel(GroupBox0)
   edt.Common.SetRect 40, y, 100, 20
@@ -528,10 +612,9 @@ Set edt = ui.NewCheckBox(GroupBox0)
 
   Set edt = ui.NewCheckBox(GroupBox0)
   edt.Common.SetRect 20, y-3, 20, 20
-  edt.Common.ControlName = "NPPeriodicExport"
-  'edt.Text = ini.StringValue("ExportITunesXML","Site")
+  edt.Common.ControlName = "EITX_PeriodicExport"
   edt.Checked = ENABLE_TIMER
-  edt.common.Enabled = False ' not yet implemented >> deactivate this control
+  edt.common.Enabled = False ' dynamic changing not yet implemented >> deactivate this control and simply show the configured value
   '
   Set edt = ui.NewLabel(GroupBox0)
   edt.Common.SetRect 40, y, 100, 20
@@ -552,24 +635,20 @@ Set edt = ui.NewCheckBox(GroupBox0)
   '
   Set edt = ui.NewEdit(GroupBox0)
   edt.Common.SetRect 80, y, 455-80, 20
-  edt.Common.ControlName = "NPPath"
-  'edt.Text = ini.StringValue("ExportITunesXML","Path")    
-  edt.Text = "iTunes Music Library.xml"
-  edt.common.Enabled = False ' not yet implemented >> deactivate this control
+  edt.Common.ControlName = "EITX_Filename"
+  edt.Text = getFilename()
+  edt.common.Enabled = True ' FIXME not yet implemented >> deactivate this control
   '
-  'Set edt = ui.NewButton(GroupBox0)
-  'edt.Common.SetRect 460,y,20,20
-  'edt.Caption = "..."
-  'edt.Common.ControlName = "NPPathBrowser"    ' to open file browser.... 
+  Set edt = ui.NewButton(GroupBox0)
+  edt.Common.SetRect 460,y,20,20
+  edt.Caption = "..." ' would be nice if we could have a filer icon like in MediaMonkey system dialogs....
+  edt.Common.ControlName = "EITX_FileBrowser"    ' to open file browser.... see getExportFilename()
+  edt.common.Enabled = False ' not yet implemented >> deactivate this control
+  
   '
   y = y + 25
 
 
-  dim dbpath : dbpath = SDB.Database.Path
-  dim parts : parts = split(dbpath, "\")
-  dim dbfilename : dbfilename = parts(UBound(parts))
-  dim path : path = Mid(dbpath, 1, Len(dbpath) - Len(dbfilename))
-  
   Set edt = ui.NewLabel(GroupBox0)
   edt.Common.SetRect 20, y+3, 100, 20
   edt.Caption = "Directory:"
@@ -579,15 +658,14 @@ Set edt = ui.NewCheckBox(GroupBox0)
   
   Set edt = ui.NewEdit(GroupBox0)
   edt.Common.SetRect 80, y, 455-80, 20
-  edt.Common.ControlName = "NPPath"
-  'edt.Text = ini.StringValue("ExportITunesXML","Path")    
-  edt.Text = path
-  edt.common.Enabled = False ' not yet implemented >> deactivate this control
+  edt.Common.ControlName = "EITX_Directory"
+  edt.Text = getDirectory()
+  edt.common.Enabled = True ' FIXME not yet implemented >> deactivate this control
   '
   Set edt = ui.NewButton(GroupBox0)
   edt.Common.SetRect 460,y,20,20
-  edt.Caption = "..."
-  edt.Common.ControlName = "NPPathBrowser"    ' to open dir browser.... see getExportFilename()
+  edt.Caption = "..." ' would be nice if we could have a folder icon like in MediaMonkey system dialogs....
+  edt.Common.ControlName = "EITX_DirectoryBrowser"    ' to open dir browser.... see getExportFilename()
   edt.common.Enabled = False ' not yet implemented >> deactivate this control
   '
   y = y + 25
@@ -595,9 +673,8 @@ Set edt = ui.NewCheckBox(GroupBox0)
 
 End Sub
 
+' Callback to store/process when configuration dialog is confimred
 Sub SaveSheet(Sheet)
-  Dim ini : Set ini = SDB.IniFile
-  'ini.StringValue("ExportITunesXML","Site") = Sheet.Common.ChildControl("NPSite").Text
-  'ini.StringValue("ExportITunesXML","User") = Sheet.Common.ChildControl("NPUser").Text
-  'ini.StringValue("ExportITunesXML","Path") = Sheet.Common.ChildControl("NPPath").Text
+  setFilename(Sheet.Common.ChildControl("EITX_Filename").Text)
+  setDirectory(Sheet.Common.ChildControl("EITX_Directory").Text)
 End Sub
