@@ -517,9 +517,10 @@ Set edt = ui.NewCheckBox(GroupBox0)
   '
   Set edt = ui.NewLabel(GroupBox0)
   edt.Common.SetRect 40, y, 100, 20
-  edt.Caption = "Export at shutdown:"
+  edt.Caption = "Export at shutdown"
   edt.Autosize = False
-  edt.Common.Hint = "If option is set the iTunes library xml will be exported when MediaMonkey is closed."
+  edt.Common.Hint = "If option is set the iTunes library xml will be exported when MediaMonkey is closed. " & _
+    "Default is off."
   '
   y = y + 25
 
@@ -534,17 +535,20 @@ Set edt = ui.NewCheckBox(GroupBox0)
   '
   Set edt = ui.NewLabel(GroupBox0)
   edt.Common.SetRect 40, y, 100, 20
-  edt.Caption = "Periodic Export:"
+  edt.Caption = "Periodic Export"
   edt.Autosize = False
-  edt.Common.Hint = "If option is set the iTunes library xml will be exported every 60 minutes."
+  edt.Common.Hint = "If option is set the iTunes library xml will be exported every 60 minutes. " & _
+    "Default is off."
   '
   y = y + 25
+
 
   Set edt = ui.NewLabel(GroupBox0)
   edt.Common.SetRect 20, y+3, 100, 20
   edt.Caption = "Filename:"
   edt.Autosize = False
-  edt.Common.Hint = "The file name for the exported iTunes Music Library XML file."
+  edt.Common.Hint = "The file name for the exported iTunes Music Library XML file. " & _
+    "If blank/empty the default value of `iTunes Music Library.xml` will be used."
   '
   Set edt = ui.NewEdit(GroupBox0)
   edt.Common.SetRect 80, y, 455-80, 20
@@ -561,8 +565,6 @@ Set edt = ui.NewCheckBox(GroupBox0)
   y = y + 25
 
 
-
-
   dim dbpath : dbpath = SDB.Database.Path
   dim parts : parts = split(dbpath, "\")
   dim dbfilename : dbfilename = parts(UBound(parts))
@@ -572,7 +574,8 @@ Set edt = ui.NewCheckBox(GroupBox0)
   edt.Common.SetRect 20, y+3, 100, 20
   edt.Caption = "Directory:"
   edt.Autosize = False
-  edt.Common.Hint = "The directory where the iTunes Music Library XML file will be stored."
+  edt.Common.Hint = "The directory where the iTunes Music Library XML file will be stored. " & _
+    "If blank/empty this will be initialised to the default location. On Windows 10 this is typically the `%APPDATA%\MediaMonkey` directory."
   
   Set edt = ui.NewEdit(GroupBox0)
   edt.Common.SetRect 80, y, 455-80, 20
@@ -580,14 +583,15 @@ Set edt = ui.NewCheckBox(GroupBox0)
   'edt.Text = ini.StringValue("ExportITunesXML","Path")    
   edt.Text = path
   edt.common.Enabled = False ' not yet implemented >> deactivate this control
-
+  '
   Set edt = ui.NewButton(GroupBox0)
   edt.Common.SetRect 460,y,20,20
   edt.Caption = "..."
   edt.Common.ControlName = "NPPathBrowser"    ' to open dir browser.... see getExportFilename()
   edt.common.Enabled = False ' not yet implemented >> deactivate this control
-
+  '
   y = y + 25
+
 
 End Sub
 
