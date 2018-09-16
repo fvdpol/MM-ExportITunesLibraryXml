@@ -13,16 +13,11 @@
 '       added child-playlists (Matthias, 12.12.2012)
 ' 1.6   migrate from report to MediaMonkey plugin with MMIP installer
 ' 1.6.1 improve unicode utf-8 output; add handling of utf-16 surrogate pairs
-' 1.6.2 added Options dialog. 
+' 1.6.2 added Options dialog
+'       dynamically configurable options for export at shutdown and periodic export
+'       dynamically configurable filename and directory
 
 option explicit     ' report undefined variables, ...
-
-' Customize options below; then (re)start MM.
-const ENABLE_TIMER = False ' change to false to prevent automatic exporting once per hour
-'const QUERY_FOLDER = False ' set to true to be asked each time where to save the iTunes xml file
-const SHUTDOWN_EXPORT = False 'True: Export to lib on shutdown of MM. False: No action on shutdown
-
-' End of options.
 
 '  ------------------------------------------------------------------
 const EXPORTING = "itunes_export_active"
@@ -128,6 +123,88 @@ function escapeXML(srcstring)
 end function
 
 
+' Getter for the configured ExportAtShutdown boolean
+function getExportAtShutdown()
+  dim myIni
+  dim myValue
+  dim myBool
+  
+  set myIni = SDB.IniFile
+  myValue = cleanFilename(myIni.StringValue("ExportITunesXML","ExportAtShutdown"))
+  'MsgBox "DBG getExportAtShutdown(): '" & myValue & "'"
+
+  ' parse ini value to boolean; use default if not defined as 0/1
+  if myValue = "0" then 
+    myBool = False
+  elseif myValue = "1" then
+    myBool = True
+  else
+    myBool = getDefaultExportAtShutdown()
+  end if
+
+  'MsgBox "DBG getExportAtShutdown(): '" & myBool & "'"
+  getExportAtShutdown = myBool
+end function
+'
+' Setter for the configured ExportAtShutdown boolean
+sub setExportAtShutdown(byVal myBool)
+  dim myIni
+  set myIni = SDB.IniFile
+  'MsgBox "DBG setExportAtShutdown(): " & myBool
+
+  if myBool then
+    myIni.StringValue("ExportITunesXML","ExportAtShutdown") = "1"
+  else
+    myIni.StringValue("ExportITunesXML","ExportAtShutdown") = "0"
+  end if
+end sub
+'
+function getDefaultExportAtShutdown()
+  getDefaultExportAtShutdown = False
+end function 
+
+' Getter for the configured PeriodicExport boolean
+function getPeriodicExport()
+  dim myIni
+  dim myValue
+  dim myBool
+  
+  set myIni = SDB.IniFile
+  myValue = cleanFilename(myIni.StringValue("ExportITunesXML","PeriodicExport"))
+  'MsgBox "DBG getPeriodicExport(): '" & myValue & "'"
+
+  ' parse ini value to boolean; use default if not defined as 0/1
+  if myValue = "0" then 
+    myBool = False
+  elseif myValue = "1" then
+    myBool = True
+  else
+    myBool = getDefaultPeriodicExport() 
+  end if
+
+  'MsgBox "DBG getPeriodicExport(): '" & myBool & "'"
+  getPeriodicExport = myBool
+end function
+'
+' Setter for the configured PeriodicExport boolean
+sub setPeriodicExport(byVal myBool)
+  dim myIni
+  set myIni = SDB.IniFile
+  'MsgBox "DBG getPeriodicExport(): " & myBool
+
+  if myBool then
+    myIni.StringValue("ExportITunesXML","PeriodicExport") = "1"
+  else
+    myIni.StringValue("ExportITunesXML","PeriodicExport") = "0"
+  end if
+end sub
+'
+function getDefaultPeriodicExport()
+  getDefaultPeriodicExport = False
+end function 
+
+
+
 ' Getter for the configured Directory
 function getDirectory()
   ' FIXME - for now, simply return the default....
@@ -135,7 +212,7 @@ function getDirectory()
   getDirectory = getDefaultDirectory()
 end function
 
-' Setter for the configured Filename
+' Setter for the configured Directory
 sub setDirectory(byVal myDirectory)
 
   ' FIXME
@@ -144,8 +221,7 @@ sub setDirectory(byVal myDirectory)
     ' simply append the missing separator
     myDirectory = myDirectory & "\"
   end if 
-
-  MsgBox "DBG setDirectory(): " & myDirectory
+MsgBox "DBG setDirectory(): " & myDirectory
 
 
   ' only store if valid!
@@ -204,7 +280,7 @@ sub setFilename(byVal myFilename)
 
 end sub
 
-' Get default for the configured Directory
+' Get default for the configured Filename
 function getDefaultFilename()
   ' The default filename will be same as written by Apple iTunes
   getDefaultFilename = "iTunes Music Library.xml"
@@ -532,11 +608,31 @@ sub ExportITunesXML()
 end sub
 
 
+' Handler for when the Toolbar button is clicked
 Sub OnToolbar(btn)
   if SDB.Objects(EXPORTING) is nothing then
     Call Export
   end if
 End Sub
+
+
+' Handler for the timer driving the periodic export
+sub periodicExport()
+  if getPeriodicExport() and (SDB.Objects(EXPORTING) is nothing) then
+    ' if export already in progress silently ignore; otherwise trigger export
+    Call Export
+  end if
+end sub
+
+
+
+' Handler for the Export on application shutdown
+sub shutdownExport()
+  if getExportAtShutdown() and (SDB.Objects(EXPORTING) is nothing) then
+    ' if export already in progress silently ignore; otherwise trigger export
+    Call Export
+  end if
+end sub
 
 
 ' Called when MM starts up, installs a timer to export the data
@@ -559,14 +655,10 @@ sub OnStartup
   ' Option sheet "Library" := -3
   Call SDB.UI.AddOptionSheet("Export to iTunes XML",Script.ScriptPath,"InitSheet","SaveSheet",-3)  
   
-  if ENABLE_TIMER then
-    dim exportTimer : set exportTimer = SDB.CreateTimer(3600000) ' export every 60 minutes
-    Script.RegisterEvent exportTimer, "OnTimer", "forcedExport"
-  end if
+  dim exportTimer : set exportTimer = SDB.CreateTimer(3600000) ' export every 60 minutes
+  Script.RegisterEvent exportTimer, "OnTimer", "periodicExport"
 
-  if SHUTDOWN_EXPORT then
-    Script.RegisterEvent SDB,"OnShutdown","forcedExport"
-  end if 
+  Script.RegisterEvent SDB,"OnShutdown","shutdownExport"
 end sub
 
 
@@ -606,8 +698,8 @@ Sub InitSheet(Sheet)
 Set edt = ui.NewCheckBox(GroupBox0)
   edt.Common.SetRect 20, y-3, 20, 20
   edt.Common.ControlName = "EITX_ExportAtShutdown"
-    edt.Checked = SHUTDOWN_EXPORT
-  edt.common.Enabled = False ' dynamic changing not yet implemented >> deactivate this control and simply show the configured value
+  edt.Checked = getExportAtShutdown()
+  edt.common.Enabled = True
   '
   Set edt = ui.NewLabel(GroupBox0)
   edt.Common.SetRect 40, y, 100, 20
@@ -623,8 +715,8 @@ Set edt = ui.NewCheckBox(GroupBox0)
   Set edt = ui.NewCheckBox(GroupBox0)
   edt.Common.SetRect 20, y-3, 20, 20
   edt.Common.ControlName = "EITX_PeriodicExport"
-  edt.Checked = ENABLE_TIMER
-  edt.common.Enabled = False ' dynamic changing not yet implemented >> deactivate this control and simply show the configured value
+  edt.Checked = getPeriodicExport()
+  edt.common.Enabled = True
   '
   Set edt = ui.NewLabel(GroupBox0)
   edt.Common.SetRect 40, y, 100, 20
@@ -647,12 +739,13 @@ Set edt = ui.NewCheckBox(GroupBox0)
   edt.Common.SetRect 80, y, 455-80, 20
   edt.Common.ControlName = "EITX_Filename"
   edt.Text = getFilename()
-  edt.common.Enabled = True ' FIXME not yet implemented >> deactivate this control
+  edt.common.Enabled = True
   '
   Set edt = ui.NewButton(GroupBox0)
   edt.Common.SetRect 460,y,20,20
   edt.Caption = "..." ' would be nice if we could have a filer icon like in MediaMonkey system dialogs....
   edt.Common.ControlName = "EITX_FileBrowser"    ' to open file browser.... see getExportFilename()
+  ' note: selecting a file would also imply setting the directory
   edt.common.Enabled = False ' not yet implemented >> deactivate this control
   
   '
@@ -670,7 +763,7 @@ Set edt = ui.NewCheckBox(GroupBox0)
   edt.Common.SetRect 80, y, 455-80, 20
   edt.Common.ControlName = "EITX_Directory"
   edt.Text = getDirectory()
-  edt.common.Enabled = True ' FIXME not yet implemented >> deactivate this control
+  edt.common.Enabled = True
   '
   Set edt = ui.NewButton(GroupBox0)
   edt.Common.SetRect 460,y,20,20
@@ -685,6 +778,9 @@ End Sub
 
 ' Callback to store/process when configuration dialog is confimred
 Sub SaveSheet(Sheet)
+  setExportAtShutdown(Sheet.Common.ChildControl("EITX_ExportAtShutdown").Checked)
+  setPeriodicExport(Sheet.Common.ChildControl("EITX_PeriodicExport").Checked)
+  '
   setFilename(Sheet.Common.ChildControl("EITX_Filename").Text)
   setDirectory(Sheet.Common.ChildControl("EITX_Directory").Text)
 End Sub
