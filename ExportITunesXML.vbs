@@ -175,22 +175,32 @@ end function
 
 
 ' Getter for the configured Filename
+' if filename is undefined/blank then return the default
 function getFilename()
-  ' FIXME - for now, simply return the default...
-    ' edt.Text = ini.StringValue("ExportITunesXML","Filename")  
-  getFilename = getDefaultFilename()
+  dim myIni
+  dim myFilename 
+  
+  set myIni = SDB.IniFile
+  myFilename = cleanFilename(myIni.StringValue("ExportITunesXML","Filename"))
+  
+  'MsgBox "DBG getFilename(): '" & myFilename & "'"
+  if myFilename = "" then 
+    myFilename = getDefaultFilename() 
+  end if
+
+  getFilename = myFilename
 end function
 
 ' Setter for the configured Filename
 sub setFilename(byVal myFilename)
-  ' FIXME
+  dim myIni
 
   ' trim any unsupported characters:
   myFilename = cleanFilename(myFilename)
 
-  MsgBox "DBG setFilename(): " & myFilename
-
-  ' only store if valid!
+  'MsgBox "DBG setFilename(): " & myFilename
+  set myIni = SDB.IniFile
+  myIni.StringValue("ExportITunesXML","Filename") = myFilename
 
 end sub
 
@@ -204,10 +214,10 @@ end function
 function cleanFilename(byVal myFilename)
   Const sInvalidChars = "/\|<>:*?"""
   Dim idx
-  for idx = 1 to Len(sInvalidChars)
-    myFilename = Replace(myFilename, Mid(sInvalidChars, idx, 1), "")
+  for idx = 1 to len(sInvalidChars)
+    myFilename = replace(myFilename, mid(sInvalidChars, idx, 1), "")
   next
- cleanFilename = myFilename
+ cleanFilename = trim(myFilename)
 End Function
 
 
