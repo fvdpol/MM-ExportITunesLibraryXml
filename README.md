@@ -39,7 +39,7 @@ Default file location for the generated "iTunes Music Library.xml" file is in sa
 
 ## History
 
-### Version 1.7
+### Version 1.6.2
 - Added Options dialog
 
 

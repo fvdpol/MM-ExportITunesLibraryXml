@@ -13,7 +13,7 @@
 '       added child-playlists (Matthias, 12.12.2012)
 ' 1.6   migrate from report to MediaMonkey plugin with MMIP installer
 ' 1.6.1 improve unicode utf-8 output; add handling of utf-16 surrogate pairs
-' 1.7.0 added Options dialog. 
+' 1.6.2 added Options dialog. 
 
 option explicit     ' report undefined variables, ...
 
