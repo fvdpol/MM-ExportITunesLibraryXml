@@ -594,13 +594,6 @@ sub Export
 end sub
 
 
-sub forcedExport()
-  if SDB.Objects(EXPORTING) is nothing then
-    Call Export
-  end if
-end sub
-
-
 sub ExportITunesXML()
   if SDB.Objects(EXPORTING) is nothing then
     Call Export
@@ -609,7 +602,7 @@ end sub
 
 
 ' Handler for when the Toolbar button is clicked
-Sub OnToolbar(btn)
+Sub OnToolbar(myButton)
   if SDB.Objects(EXPORTING) is nothing then
     Call Export
   end if
@@ -617,7 +610,7 @@ End Sub
 
 
 ' Handler for the timer driving the periodic export
-sub periodicExport()
+sub periodicExport(myTimer)
   if getPeriodicExport() and (SDB.Objects(EXPORTING) is nothing) then
     ' if export already in progress silently ignore; otherwise trigger export
     Call Export
@@ -652,12 +645,16 @@ sub OnStartup
   End If
   Call Script.UnRegisterHandler("OnToolbar")
   Call Script.RegisterEvent(btn,"OnClick","OnToolbar")
+
   ' Option sheet "Library" := -3
   Call SDB.UI.AddOptionSheet("Export to iTunes XML",Script.ScriptPath,"InitSheet","SaveSheet",-3)  
   
-  dim exportTimer : set exportTimer = SDB.CreateTimer(3600000) ' export every 60 minutes
+  ' Register handler for the periodic export
+  dim exportTimer : set exportTimer = SDB.CreateTimer(3600000) ' export every 60 minutes (arg in ms)
+  Set SDB.Objects("ExportITunesXMLExportTimer") = exportTimer    
   Script.RegisterEvent exportTimer, "OnTimer", "periodicExport"
 
+  ' Register handler for the export on shutdown
   Script.RegisterEvent SDB,"OnShutdown","shutdownExport"
 end sub
 
