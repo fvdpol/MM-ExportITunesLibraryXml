@@ -81,23 +81,33 @@ If you select the "Folder" Auto Playlist you should see all tracks from the chil
 Note that Native Instruments Traktor is known to ignore / filter-out playlists that do not contain any tracks. A work-around could be to include a dummy track.
 
 
-## History
+## Version History
 
 ### Version 1.6.2
+_Released on September 17, 2018_
 - Added Options dialog
+- Dynamically configurable options for export at shutdown and periodic export
+- Dynamically configurable filename and directory
+- Refactor logic to write playlists:
+    - correctly handle playlists with duplicate names 
+    - export using same sort order as MediaMonkey
+    - export parent before children (as per iTunes behaviour)
 
 
 ### Version 1.6.1
+_Released on August 25, 2018_
 - Improved utf-8 unicode handling; support for utf-16 surrogate pairs
 
 
 ### Version 1.6
+_Released on june 20, 2018_
 - Migrated report to a standard script
 - Added MediaMonkey package installer (ExportItunesXML.mmip)
 - Added auto-update of script from GitHub repository
 
 
 ### Version 1.5
+_Released on June 14, 2018_
 - Update to add BPM field for Traktor; by Rhashime posted Sat Dec 24, 2011 12:14 pm
 http://www.mediamonkey.com/forum/viewtopic.php?f=2&t=31680&start=60#p324753
 
@@ -107,20 +117,24 @@ http://www.mediamonkey.com/forum/viewtopic.php?f=2&t=31680&start=60#p354155
 
 
 ### Version 1.4
+_Released on June 6, 2018_
 - Fixed: Traktor failing import due to invalid characters in xml (& -> `&#38;`); fvdpol, July 4 2018
 
 
 ### Version 1.3
+_Released on June 6, 2018_
 - Fixed URI encoding, added Last Player; by VariableFlame posted Sun Jan 07, 2018 5:10 pm
 http://www.mediamonkey.com/forum/viewtopic.php?f=2&t=31680&start=75#p441991
 
 
 ### Version 1.2
+_Released on June 6, 2018_
 - Update for Unicode ; by DC posted Sun Oct 10, 2010 6:21 pm
 http://www.mediamonkey.com/forum/viewtopic.php?f=2&t=31680&start=60#p272344
 
 
 ### Version 1.0
+_Released on June 6, 2018_
 - Script Original Version; by DC posted Wed Aug 06, 2008 3:01 pm
 http://www.mediamonkey.com/forum/viewtopic.php?f=2&t=31680#p162175
 

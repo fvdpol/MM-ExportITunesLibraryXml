@@ -16,6 +16,10 @@
 ' 1.6.2 added Options dialog
 '       dynamically configurable options for export at shutdown and periodic export
 '       dynamically configurable filename and directory
+'       refactor logic to write playlists:
+'         - correctly handle playlists with duplicate names 
+'         - export using same sort order as MediaMonkey
+'         - export parent before children (as per iTunes behaviour)
 
 option explicit     ' report undefined variables, ...
 
@@ -378,28 +382,77 @@ function getExportFilename()
   getExportFilename = getDirectory() + getFilename()
 end function
 
-' MM stores childplaylists, while iTunes XML stores parent playlist
-' This function gets the parent playlist (if existent) 
-' Added 12.12.2012 by Matthias 
-function getparentID(playlist)
-	Dim childID, childItems, i, iter
-	childID = playlist.ID
-    set iter = SDB.Database.OpenSQL("select PlaylistName from PLAYLISTS")
-    while not iter.EOF 
-		if playlist.Title <> "Accessible Tracks" then ' this would correspond to iTunes' "Library" playlist
-			Set childItems = SDB.PlaylistByTitle(iter.StringByIndex(0)).ChildPlaylists
-			For i=0 To childItems.Count-1
-				if childItems.Item(i).ID = childID then  
-					getparentID = SDB.PlaylistByTitle(iter.StringByIndex(0)).ID
-					exit function
-				end if 
-			next
-		end if
-      iter.next
-    wend      
-    set iter = nothing
-	getparentID = 0 
+
+' find the parent playlist ID for given playlist. Returns 0 if no parent exists
+function getparentID(byVal myPlaylist)
+	dim iter
+  dim myPlaylistID, myParentID
+	myPlaylistID = myPlaylist.ID
+  myParentID = 0
+  set iter = SDB.Database.OpenSQL("select ParentPlaylist from PLAYLISTS where IDPlaylist=" & myPlaylistID)
+  while not iter.EOF 
+    myParentID = iter.ValueByIndex(0)
+    iter.next
+  wend      
+  set iter = nothing
+	getparentID = myParentID
 end function
+
+
+
+' process one level of playlist; traverse into child playlists where needed
+sub WritePlaylist(fout, progress, byval progressText, byval myPlaylist)
+  dim myChildPlaylists : Set myChildPlaylists = myPlaylist.ChildPlaylists
+  dim i,j, playlist  
+  dim parentID
+  dim tracks
+  
+  for i = 0 To myChildPlaylists.Count - 1                             ' For all (first-level) playlists in List...
+    Set playlist = myChildPlaylists.Item(i)                                ' ... print out the number of child playlists and tracks
+	  parentID = getparentID(playlist)
+    set tracks = playlist.Tracks
+      
+    progress.Text = progressText & " " & SDB.LocalizedFormat("playlist ""%s"" (%s songs)", playlist.Title, CStr(tracks.Count), 0)
+    SDB.ProcessMessages
+
+    fout.WriteLine "        <dict>"
+    addKey fout, "Name", escapeXML(playlist.Title), "string"
+    ' Apparently only used for "Library" playlist:
+    ' addKey fout, "Master", Nothing, "true"
+    ' addKey fout, "Visible", Nothing, "empty"
+    addKey fout, "Playlist ID", playlist.ID, "integer"
+
+    ' No MM field for this:  
+	  addKey fout, "Playlist Persistent ID", playlist.ID, "string"
+
+	  if parentID <> 0 then
+		  addKey fout, "Parent Persistent ID", parentID, "string"
+	  end if 
+    fout.WriteLine "            <key>All Items</key><true/>"
+    if tracks.Count > 0 then      
+      fout.WriteLine "            <key>Playlist Items</key>"
+      fout.WriteLine "            <array>"
+      for j = 0 to tracks.Count - 1
+        fout.WriteLine "                <dict>"
+        fout.WriteLine "                    <key>Track ID</key><integer>" & tracks.Item(j).ID & "</integer>"
+        fout.WriteLine "                </dict>"
+      next 
+      fout.WriteLine "            </array>"
+    end if
+    fout.WriteLine "        </dict>"
+            
+    progress.Value = progress.Value + 50
+    if Progress.Terminate or Script.Terminate then
+      exit for
+    end if
+
+    ' if this playlist has any childs playlists traverse through them...
+    if (playlist.ChildPlaylists.count > 0) then
+      call WritePlaylist(fout, progress, progressText, playlist)
+    end if
+  next
+end sub
+
 
 
 ' Exports the full MM library and playlists into an iTunes compatible
@@ -547,63 +600,10 @@ sub Export
   if playlistCount > 0 and not Progress.Terminate and not Script.Terminate then
     fout.WriteLine "    <key>Playlists</key>"
     fout.WriteLine "    <array>"
+
+    Dim RootPlaylist : Set RootPlaylist = SDB.PlaylistByID(-1) ' Playlist represents the root (virtual) playlist
+    call WritePlaylist(fout, progress, progressText, RootPlaylist)
     
-    ' Get playlists and store them into an array. Make sure that we do not have
-    ' an open query while playlist.Tracks is evaluated because that will fail
-    ' (it wants to start a db transaction but can't because a query is still open)
-    dim playlists()
-    set iter = SDB.Database.OpenSQL("select PlaylistName from PLAYLISTS")
-    i = 0
-    while not iter.EOF 
-      set playlist = SDB.PlaylistByTitle(iter.StringByIndex(0))
-      if playlist.Title <> "Accessible Tracks" then ' this would correspond to iTunes' "Library" playlist
-        redim preserve playlists(i)
-        set playlists(i) = playlist
-        i = i + 1
-      end if
-      iter.next
-    wend      
-    set iter = nothing
-
-    for each playlist in playlists
-	    dim parentID
-	    parentID = getparentID(playlist)
-      set tracks = playlist.Tracks
-      ' %d always inserts 0, don't know why
-      i = i + 1
-      progress.Text = progressText & " " & SDB.LocalizedFormat("playlist ""%s"" (%s songs)", playlist.Title, CStr(tracks.Count), 0)
-      SDB.ProcessMessages
-
-      fout.WriteLine "        <dict>"
-      addKey fout, "Name", escapeXML(playlist.Title), "string"
-      ' Apparently only used for "Library" playlist:
-      ' addKey fout, "Master", Nothing, "true"
-      ' addKey fout, "Visible", Nothing, "empty"
-      addKey fout, "Playlist ID", playlist.ID, "integer"
-      ' No MM field for this:
-      
-	  addKey fout, "Playlist Persistent ID", playlist.ID, "string"
-	  if parentID <> 0 then
-		  addKey fout, "Parent Persistent ID", parentID, "string"
-	  end if 
-      fout.WriteLine "         <key>All Items</key><true/>"
-      if tracks.Count > 0 then      
-        fout.WriteLine "            <key>Playlist Items</key>"
-        fout.WriteLine "            <array>"
-        for j = 0 to tracks.Count - 1
-          fout.WriteLine "                <dict>"
-          fout.WriteLine "                    <key>Track ID</key><integer>" & tracks.Item(j).ID & "</integer>"
-          fout.WriteLine "                </dict>"
-        next 
-        fout.WriteLine "            </array>"
-      end if
-      fout.WriteLine "        </dict>"
-            
-      progress.Value = progress.Value + 50
-      if Progress.Terminate or Script.Terminate then
-        exit for
-      end if
-    next 
     fout.WriteLine "    </array>"
   end if
   
