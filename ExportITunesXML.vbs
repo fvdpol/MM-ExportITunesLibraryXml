@@ -21,10 +21,10 @@ option explicit     ' report undefined variables, ...
 
 '  ------------------------------------------------------------------
 const EXPORTING = "itunes_export_active"
-dim scriptControl ' : scriptControl = CreateObject("ScriptControl")
+dim scriptControl
 
 ' Returns encoded URI for provided location string. 
-function encodeLocation(location)
+function encodeLocation(ByVal location)
   ' 10.10.2010: need jscript engine to access its encodeURI function which is not 
   ' available in vbscript
   if isEmpty(scriptControl) then
@@ -77,7 +77,7 @@ end function
 ' codepoints > 65535.
 '
 ' added escaping of xml special characters as per original itunes and required by Traktor parser
-function escapeXML(srcstring)
+function escapeXML(ByVal srcstring)
   dim i, codepoint, currentchar, replacement
   i = 1
   while i <= Len(srcstring)
@@ -131,7 +131,6 @@ function getExportAtShutdown()
   
   set myIni = SDB.IniFile
   myValue = cleanFilename(myIni.StringValue("ExportITunesXML","ExportAtShutdown"))
-  'MsgBox "DBG getExportAtShutdown(): '" & myValue & "'"
 
   ' parse ini value to boolean; use default if not defined as 0/1
   if myValue = "0" then 
@@ -142,7 +141,6 @@ function getExportAtShutdown()
     myBool = getDefaultExportAtShutdown()
   end if
 
-  'MsgBox "DBG getExportAtShutdown(): '" & myBool & "'"
   getExportAtShutdown = myBool
 end function
 '
@@ -150,7 +148,6 @@ end function
 sub setExportAtShutdown(byVal myBool)
   dim myIni
   set myIni = SDB.IniFile
-  'MsgBox "DBG setExportAtShutdown(): " & myBool
 
   if myBool then
     myIni.StringValue("ExportITunesXML","ExportAtShutdown") = "1"
@@ -171,7 +168,6 @@ function getPeriodicExport()
   
   set myIni = SDB.IniFile
   myValue = cleanFilename(myIni.StringValue("ExportITunesXML","PeriodicExport"))
-  'MsgBox "DBG getPeriodicExport(): '" & myValue & "'"
 
   ' parse ini value to boolean; use default if not defined as 0/1
   if myValue = "0" then 
@@ -182,7 +178,6 @@ function getPeriodicExport()
     myBool = getDefaultPeriodicExport() 
   end if
 
-  'MsgBox "DBG getPeriodicExport(): '" & myBool & "'"
   getPeriodicExport = myBool
 end function
 '
@@ -190,7 +185,6 @@ end function
 sub setPeriodicExport(byVal myBool)
   dim myIni
   set myIni = SDB.IniFile
-  'MsgBox "DBG getPeriodicExport(): " & myBool
 
   if myBool then
     myIni.StringValue("ExportITunesXML","PeriodicExport") = "1"
@@ -224,12 +218,6 @@ sub setDirectory(byVal myDirectory)
 MsgBox "DBG setDirectory(): " & myDirectory
 
 
-  ' only store if valid!
-  ' Dim ini : Set ini = SDB.IniFile
-  'ini.StringValue("ExportITunesXML","Site") = Sheet.Common.ChildControl("NPSite").Text
-  'ini.StringValue("ExportITunesXML","User") = Sheet.Common.ChildControl("NPUser").Text
-  'ini.StringValue("ExportITunesXML","Path") = Sheet.Common.ChildControl("NPPath").Text
-
 end sub
 
 ' Get default for the configured Directory
@@ -259,7 +247,6 @@ function getFilename()
   set myIni = SDB.IniFile
   myFilename = cleanFilename(myIni.StringValue("ExportITunesXML","Filename"))
   
-  'MsgBox "DBG getFilename(): '" & myFilename & "'"
   if myFilename = "" then 
     myFilename = getDefaultFilename() 
   end if
@@ -274,10 +261,8 @@ sub setFilename(byVal myFilename)
   ' trim any unsupported characters:
   myFilename = cleanFilename(myFilename)
 
-  'MsgBox "DBG setFilename(): " & myFilename
   set myIni = SDB.IniFile
   myIni.StringValue("ExportITunesXML","Filename") = myFilename
-
 end sub
 
 ' Get default for the configured Filename
@@ -299,7 +284,7 @@ End Function
 
 ' N must be numberic. Return value is N converted to a string, padded with
 ' a single "0" if N has only one digit.
-function LdgZ(N)    
+function LdgZ(ByVal N)    
   if (N >= 0) and (N < 10) then 
     LdgZ = "0" & N 
   else 
@@ -308,7 +293,7 @@ function LdgZ(N)
 end function  
 
 ' Adds a simple key/value pair to the XML accessible via textfile fout.
-sub addKey(fout, key, val, keytype)
+sub addKey(ByVal fout, ByVal key, ByVal val, ByVal keytype)
   if keytype = "string" then
     if val = "" then ' nested if because there is no shortcut boolean eval
       exit sub
@@ -628,12 +613,9 @@ sub shutdownExport()
 end sub
 
 
-' Called when MM starts up, installs a timer to export the data
-' frequently to the iTunes library.xml.
+' Called when MM starts up
 sub OnStartup
-
-  'MsgBox "DBG: ExportITunesXML OnStartup called"
-
+  ' Create and register toolbar button
   Dim btn : Set btn = SDB.Objects("ExportITunesXMLButton")
   If btn Is Nothing Then
     Set btn = SDB.UI.AddMenuItem(SDB.UI.Menu_TbStandard,0,0) 
@@ -646,7 +628,7 @@ sub OnStartup
   Call Script.UnRegisterHandler("OnToolbar")
   Call Script.RegisterEvent(btn,"OnClick","OnToolbar")
 
-  ' Option sheet "Library" := -3
+  ' Register Option sheet as child under "Library" := -3
   Call SDB.UI.AddOptionSheet("Export to iTunes XML",Script.ScriptPath,"InitSheet","SaveSheet",-3)  
   
   ' Register handler for the periodic export
