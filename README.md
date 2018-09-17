@@ -7,10 +7,10 @@ Based on the original script posted by "DC" on the MediaMonkey forum to export t
 http://www.mediamonkey.com/forum/viewtopic.php?f=2&t=31680
 
 
-My primary use-case for this script is to export the MediaMonkey library/playlists for use in Native Instruments TraktorDJ: as bridge to DJ software.
+Primary use-case for this script is to export the MediaMonkey library/playlists for use in Native Instruments TraktorDJ: as bridge to DJ software.
 
 
-Tested:
+### Tested Versions:
 
 | Software                      | Version   | OS          | Note                                                                    |
 |-------------------------------|-----------|-------------|---------------------------------------------------------------|
@@ -37,7 +37,55 @@ https://github.com/fvdpol/MM-ExportITunesLibraryXml/releases/latest
 
 Default file location for the generated "iTunes Music Library.xml" file is in same location where the MediaMonkey database is stored. On Windows 10 this is typically the `%APPDATA%\MediaMonkey` directory.
 
+## Configuration
+
+A number of settings that were initially harcoded / configured in the script can (since version 1.6.2) be managed via the MediaMonkey Options dialog. 
+
+Navigate to Tools menu -> Options, and open the "Export to iTunes XML configuration dialog within the Library section. 
+
+| Setting | Description |
+|---------|-------------|
+| Export at Shutdown | If option is set the iTunes library xml will be exported when MediaMonkey is closed. <br> Default is off.| 
+| Periodic Export | If option is set the iTunes library xml will be exported every 60 minutes. <br> Default is off.|
+| Filename | The file name for the exported iTunes Music Library XML file. <br> If blank/empty the default value of `iTunes Music Library.xml` will be used.|
+| Directory | The directory where the iTunes Music Library XML file will be stored. <br> If blank/empty this will be initialised to the default location. On Windows 10 this is typically the `%APPDATA%\MediaMonkey` directory. |
+
+
+
+## Nested playlists, Folders and Traktor
+
+Apple iTunes and MediaMonkey handle nested playlists / folders in a different way. Due to this difference the result in applications like Native Instruments Traktor may sometimes not be what one expects.
+
+### iTunes:
+- Playlists can be 'manual' playlists or auto playlist using some rules -- similar to MediaMonkey
+- Folders are a special object that can contain playlists or folders. in the XML the folder contains the contents of all children
+
+### MediaMonkey:
+
+- Playlists can be 'manual' playlists or auto playlist using some rules -- similar to iTunes
+- Playlists can be nested: a playlist can contain tracks (as per above) but also child playlists
+
+The main difference is that in iTunes a folder will always show the contents of all folders and/or playlists underneath, while MediaMonkey can have parent playlists that are empty or contain something different. 
+
+
+### Workaround
+
+To emulate the iTunes folders in MediaMonkey following construct can be applied in MediaMonkey:
+- Create an Auto Playlist that will serve as folder
+- Move/add the child playlists under this Auto Playlist
+- Set the rule (advanced tab) 'is playlist' and checkmark the child playlists
+
+If you select the "Folder" Auto Playlist you should see all tracks from the child playlists. Traktor should recognise this as folder and show folder with the child playlists underneath.
+
+
+Note that Native Instruments Traktor is known to ignore / filter-out playlists that do not contain any tracks. A work-around could be to include a dummy track.
+
+
 ## History
+
+### Version 1.6.2
+- Added Options dialog
+
 
 ### Version 1.6.1
 - Improved utf-8 unicode handling; support for utf-16 surrogate pairs

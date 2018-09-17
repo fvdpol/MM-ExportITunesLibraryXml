@@ -13,22 +13,18 @@
 '       added child-playlists (Matthias, 12.12.2012)
 ' 1.6   migrate from report to MediaMonkey plugin with MMIP installer
 ' 1.6.1 improve unicode utf-8 output; add handling of utf-16 surrogate pairs
+' 1.6.2 added Options dialog
+'       dynamically configurable options for export at shutdown and periodic export
+'       dynamically configurable filename and directory
 
 option explicit     ' report undefined variables, ...
 
-' Customize options below; then (re)start MM.
-const ENABLE_TIMER = false ' change to false to prevent automatic exporting once per hour
-const QUERY_FOLDER = false ' set to true to be asked each time where to save the iTunes xml file
-const SHUTDOWN_EXPORT = false 'True: Export to lib on shutdown of MM. False: No action on shutdown
-
-' End of options.
-
 '  ------------------------------------------------------------------
 const EXPORTING = "itunes_export_active"
-dim scriptControl ' : scriptControl = CreateObject("ScriptControl")
+dim scriptControl
 
 ' Returns encoded URI for provided location string. 
-function encodeLocation(location)
+function encodeLocation(ByVal location)
   ' 10.10.2010: need jscript engine to access its encodeURI function which is not 
   ' available in vbscript
   if isEmpty(scriptControl) then
@@ -81,7 +77,7 @@ end function
 ' codepoints > 65535.
 '
 ' added escaping of xml special characters as per original itunes and required by Traktor parser
-function escapeXML(srcstring)
+function escapeXML(ByVal srcstring)
   dim i, codepoint, currentchar, replacement
   i = 1
   while i <= Len(srcstring)
@@ -126,9 +122,202 @@ function escapeXML(srcstring)
   escapeXML = srcstring
 end function
 
+
+' Getter for the configured ExportAtShutdown boolean
+function getExportAtShutdown()
+  dim myIni
+  dim myValue
+  dim myBool
+  
+  set myIni = SDB.IniFile
+  myValue = cleanFilename(myIni.StringValue("ExportITunesXML","ExportAtShutdown"))
+
+  ' parse ini value to boolean; use default if not defined as 0/1
+  if myValue = "0" then 
+    myBool = False
+  elseif myValue = "1" then
+    myBool = True
+  else
+    myBool = getDefaultExportAtShutdown()
+  end if
+
+  getExportAtShutdown = myBool
+end function
+'
+' Setter for the configured ExportAtShutdown boolean
+sub setExportAtShutdown(byVal myBool)
+  dim myIni
+  set myIni = SDB.IniFile
+
+  if myBool then
+    myIni.StringValue("ExportITunesXML","ExportAtShutdown") = "1"
+  else
+    myIni.StringValue("ExportITunesXML","ExportAtShutdown") = "0"
+  end if
+end sub
+'
+function getDefaultExportAtShutdown()
+  getDefaultExportAtShutdown = False
+end function 
+
+' Getter for the configured PeriodicExport boolean
+function getPeriodicExport()
+  dim myIni
+  dim myValue
+  dim myBool
+  
+  set myIni = SDB.IniFile
+  myValue = cleanFilename(myIni.StringValue("ExportITunesXML","PeriodicExport"))
+
+  ' parse ini value to boolean; use default if not defined as 0/1
+  if myValue = "0" then 
+    myBool = False
+  elseif myValue = "1" then
+    myBool = True
+  else
+    myBool = getDefaultPeriodicExport() 
+  end if
+
+  getPeriodicExport = myBool
+end function
+'
+' Setter for the configured PeriodicExport boolean
+sub setPeriodicExport(byVal myBool)
+  dim myIni
+  set myIni = SDB.IniFile
+
+  if myBool then
+    myIni.StringValue("ExportITunesXML","PeriodicExport") = "1"
+  else
+    myIni.StringValue("ExportITunesXML","PeriodicExport") = "0"
+  end if
+end sub
+'
+function getDefaultPeriodicExport()
+  getDefaultPeriodicExport = False
+end function 
+
+
+
+' Getter for the configured Directory
+function getDirectory()
+  dim myIni
+  dim myDirectory 
+  
+  set myIni = SDB.IniFile
+  myDirectory = cleanDirectoryName(myIni.StringValue("ExportITunesXML","Directory"))
+
+  if isValidDirectory(myDirectory) = False then
+    myDirectory = getDefaultDirectory()
+  end if
+
+  getDirectory = myDirectory
+end function
+
+' Setter for the configured Directory
+sub setDirectory(byVal myDirectory)
+  dim myIni
+  myDirectory = cleanDirectoryName(myDirectory)
+
+  if isValidDirectory(myDirectory) = False then
+    myDirectory = getDefaultDirectory()
+  end if
+
+  set myIni = SDB.IniFile
+  myIni.StringValue("ExportITunesXML","Directory") = myDirectory
+
+end sub
+
+' Get default for the configured Directory
+function getDefaultDirectory()
+  ' The default file location will be in the same folder as the database 
+  ' because this folder is writable and user specific.
+  dim dbpath : dbpath = SDB.Database.Path
+  dim parts : parts = split(dbpath, "\")
+  dim dbfilename : dbfilename = parts(UBound(parts))
+  dim path : path = Mid(dbpath, 1, Len(dbpath) - Len(dbfilename))
+
+  getDefaultDirectory = path
+end function
+
+function cleanDirectoryName(byVal myDirectory)
+  ' do so basic cleanup; ensure the path ends with a directory separator
+  if right(myDirectory,1) <> "\" then
+    ' simply append the missing separator
+    myDirectory = myDirectory & "\"
+  end if 
+  cleanDirectoryName = myDirectory
+end function
+
+' Return true if the directory is defined
+function isValidDirectory(byVal myDirectory)
+  dim myResult : myResult = True
+
+  ' check for blank/empty directory
+  if trim(myDirectory) = "" or trim(myDirectory) = "\" then
+    myResult = False
+  end if
+
+  ' potential test to check if the directory is actually writable...
+  '
+  ' for now assume all will be good and trap any errors writing to the
+  ' in the actual export routine.
+  
+  isValidDirectory = myResult
+end function 
+
+
+' Getter for the configured Filename
+' if filename is undefined/blank then return the default
+function getFilename()
+  dim myIni
+  dim myFilename 
+  
+  set myIni = SDB.IniFile
+  myFilename = cleanFilename(myIni.StringValue("ExportITunesXML","Filename"))
+  
+  if myFilename = "" then 
+    myFilename = getDefaultFilename() 
+  end if
+
+  getFilename = myFilename
+end function
+
+' Setter for the configured Filename
+sub setFilename(byVal myFilename)
+  dim myIni
+
+  ' trim any unsupported characters:
+  myFilename = cleanFilename(myFilename)
+
+   if myFilename = "" then 
+    myFilename = getDefaultFilename() 
+  end if
+
+  set myIni = SDB.IniFile
+  myIni.StringValue("ExportITunesXML","Filename") = myFilename
+end sub
+
+' Get default for the configured Filename
+function getDefaultFilename()
+  ' The default filename will be same as written by Apple iTunes
+  getDefaultFilename = "iTunes Music Library.xml"
+end function
+
+' remove invalid characters from the filename
+function cleanFilename(byVal myFilename)
+  Const sInvalidChars = "/\|<>:*?"""
+  Dim idx
+  for idx = 1 to len(sInvalidChars)
+    myFilename = replace(myFilename, mid(sInvalidChars, idx, 1), "")
+  next
+ cleanFilename = trim(myFilename)
+End Function
+
+
 ' N must be numberic. Return value is N converted to a string, padded with
 ' a single "0" if N has only one digit.
-function LdgZ(N)    
+function LdgZ(ByVal N)    
   if (N >= 0) and (N < 10) then 
     LdgZ = "0" & N 
   else 
@@ -137,7 +326,7 @@ function LdgZ(N)
 end function  
 
 ' Adds a simple key/value pair to the XML accessible via textfile fout.
-sub addKey(fout, key, val, keytype)
+sub addKey(ByVal fout, ByVal key, ByVal val, ByVal keytype)
   if keytype = "string" then
     if val = "" then ' nested if because there is no shortcut boolean eval
       exit sub
@@ -165,27 +354,28 @@ end sub
 ' 29.03.2009: if the new option QUERY_FOLDER is set to true this function
 ' will query for the folder to save to instead.
 function getExportFilename()
-  dim path
-  if QUERY_FOLDER then
-    dim inif
-    set inif = SDB.IniFile
-    path = inif.StringValue("Scripts", "LastExportITunesXMLDir")
-    path = SDB.SelectFolder(path, SDB.Localize("Select where to export the iTunes XML file to."))
-    if path = "" then
-      exit function
-    end if
-    if right(path, 1) <> "\" then
-      path = path & "\"
-    end if
-    inif.StringValue("Scripts", "LastExportITunesXMLDir") = path
-    set inif = Nothing  
-  else
-    dim dbpath : dbpath = SDB.Database.Path
-    dim parts : parts = split(dbpath, "\")
-    dim dbfilename : dbfilename = parts(UBound(parts))
-    path = Mid(dbpath, 1, Len(dbpath) - Len(dbfilename))
-  end if
-  getExportFilename = path + "iTunes Music Library.xml"
+'  dim path
+'  if QUERY_FOLDER then
+'    dim inif
+'    set inif = SDB.IniFile
+'    path = inif.StringValue("Scripts", "LastExportITunesXMLDir")
+'    path = SDB.SelectFolder(path, SDB.Localize("Select where to export the iTunes XML file to."))
+'    if path = "" then
+'      exit function
+'    end if
+'    if right(path, 1) <> "\" then
+'      path = path & "\"
+'    end if
+'    inif.StringValue("Scripts", "LastExportITunesXMLDir") = path
+'    set inif = Nothing  
+'  else
+'    dim dbpath : dbpath = SDB.Database.Path
+'    dim parts : parts = split(dbpath, "\")
+'    dim dbfilename : dbfilename = parts(UBound(parts))
+'    path = Mid(dbpath, 1, Len(dbpath) - Len(dbfilename))
+'  end if
+'  getExportFilename = path + "iTunes Music Library.xml"
+  getExportFilename = getDirectory() + getFilename()
 end function
 
 ' MM stores childplaylists, while iTunes XML stores parent playlist
@@ -236,13 +426,22 @@ sub Export
   set fso = SDB.Tools.FileSystem
   set fout = fso.CreateTextFile(filename, true)
 
+  if fout is nothing then
+     MsgBox SDB.Localize("Unable to write to '" & filename & "'."), 64, "iTunes Export Script"
+
+     ' cleanup
+     set fso = nothing
+     SDB.Objects(EXPORTING) = nothing
+    exit sub
+  end if
+
   set iter = SDB.Database.OpenSQL("select count(*) from SONGS")
   songCount = Int(iter.ValueByIndex(0)) ' needed for progress
   set iter = SDB.Database.OpenSQL("select count(*) from PLAYLISTS")
   playlistCount = CInt(iter.ValueByIndex(0)) 
 
   set progress = SDB.Progress
-  progressText = SDB.Localize("Exporting to iTunes library.xml...")
+  progressText = SDB.Localize("Exporting to " & getFilename() & "...")
   Progress.Text = progressText
   Progress.MaxValue = songCount + playlistCount * 50
 
@@ -422,13 +621,6 @@ sub Export
 end sub
 
 
-sub forcedExport()
-  if SDB.Objects(EXPORTING) is nothing then
-    Call Export
-  end if
-end sub
-
-
 sub ExportITunesXML()
   if SDB.Objects(EXPORTING) is nothing then
     Call Export
@@ -436,37 +628,58 @@ sub ExportITunesXML()
 end sub
 
 
-Sub OnToolbar(btn)
+' Handler for when the Toolbar button is clicked
+Sub OnToolbar(myButton)
   if SDB.Objects(EXPORTING) is nothing then
     Call Export
   end if
 End Sub
 
 
-' Called when MM starts up, installs a timer to export the data
-' frequently to the iTunes library.xml.
+' Handler for the timer driving the periodic export
+sub periodicExport(myTimer)
+  if getPeriodicExport() and (SDB.Objects(EXPORTING) is nothing) then
+    ' if export already in progress silently ignore; otherwise trigger export
+    Call Export
+  end if
+end sub
+
+
+
+' Handler for the Export on application shutdown
+sub shutdownExport()
+  if getExportAtShutdown() and (SDB.Objects(EXPORTING) is nothing) then
+    ' if export already in progress silently ignore; otherwise trigger export
+    Call Export
+  end if
+end sub
+
+
+' Called when MM starts up
 sub OnStartup
-  Dim btn : Set btn = SDB.Objects("PlaylistFTPButton")
+  ' Create and register toolbar button
+  Dim btn : Set btn = SDB.Objects("ExportITunesXMLButton")
   If btn Is Nothing Then
     Set btn = SDB.UI.AddMenuItem(SDB.UI.Menu_TbStandard,0,0) 
-    btn.Caption = "ExportITunesXMLBB"
-    btn.Hint = "Exports all tracks and playlists to an iTunes library.xml file"
+    btn.Caption = "ExportITunesXML"
+    btn.Hint = "Exports all tracks and playlists to an iTunes Music Library.xml file"
     btn.IconIndex = 56
     btn.Visible = True
     Set SDB.Objects("ExportITunesXMLButton") = btn    
   End If
   Call Script.UnRegisterHandler("OnToolbar")
   Call Script.RegisterEvent(btn,"OnClick","OnToolbar")
-'  Call SDB.UI.AddOptionSheet("PlaylistFTP Settings",Script.ScriptPath,"InitSheet","SaveSheet",-2)  
-  
-  if ENABLE_TIMER then
-    dim exportTimer : set exportTimer = SDB.CreateTimer(3600000) ' export every 60 minutes
-    Script.RegisterEvent exportTimer, "OnTimer", "forcedExport"
-  end if
 
-  if SHUTDOWN_EXPORT then
-    Script.RegisterEvent SDB,"OnShutdown","forcedExport"
-  end if 
+  ' Register Option sheet as child under "Library" := -3
+  Call SDB.UI.AddOptionSheet("Export to iTunes XML",Script.ScriptPath,"InitSheet","SaveSheet",-3)  
+  
+  ' Register handler for the periodic export
+  dim exportTimer : set exportTimer = SDB.CreateTimer(3600000) ' export every 60 minutes (arg in ms)
+  Set SDB.Objects("ExportITunesXMLExportTimer") = exportTimer    
+  Script.RegisterEvent exportTimer, "OnTimer", "periodicExport"
+
+  ' Register handler for the export on shutdown
+  Script.RegisterEvent SDB,"OnShutdown","shutdownExport"
 end sub
 
 
@@ -475,15 +688,115 @@ Sub OnInstall()
   Dim inip : inip = SDB.ScriptsPath & "Scripts.ini"
   Dim inif : Set inif = SDB.Tools.IniFileByPath(inip)
   If Not (inif Is Nothing) Then
-    inif.StringValue("PlaylistFTP","Filename") = "ExportITunesXML.vbs"
-    inif.StringValue("PlaylistFTP","Procname") = "ExportITunesXML"
-    inif.StringValue("PlaylistFTP","Order") = "10"
-    inif.StringValue("PlaylistFTP","DisplayName") = "Export to iTunes XML"
-    inif.StringValue("PlaylistFTP","Description") = "Exports all tracks and playlists to an iTunes library.xml file"
-    inif.StringValue("PlaylistFTP","Language") = "VBScript"
-    inif.StringValue("PlaylistFTP","ScriptType") = "0"	
-	'inif.StringValue("PlaylistFTP","Shortcut") = "Ctrl+i"
+    inif.StringValue("ExportITunesXML","Filename") = "Auto\ExportITunesXML.vbs"
+    inif.StringValue("ExportITunesXML","Procname") = "ExportITunesXML"
+    inif.StringValue("ExportITunesXML","Order") = "10"
+    inif.StringValue("ExportITunesXML","DisplayName") = "Export to iTunes XML"
+    inif.StringValue("ExportITunesXML","Description") = "Exports all tracks and playlists to an iTunes library.xml file"
+    inif.StringValue("ExportITunesXML","Language") = "VBScript"
+    inif.StringValue("ExportITunesXML","ScriptType") = "0"	
+	  'inif.StringValue("ExportITunesXML","Shortcut") = "Ctrl+i"
     SDB.RefreshScriptItems
   End If
   Call OnStartup()
+End Sub
+
+' Callback to build the configuration dialog
+Sub InitSheet(Sheet)
+  Dim ini : Set ini = SDB.IniFile  
+  Dim ui : Set ui = SDB.UI
+
+	Dim GroupBox0
+	Set GroupBox0 = UI.NewGroupBox(Sheet)
+	GroupBox0.Caption = "Export to iTunes XML Configuration"
+	GroupBox0.Common.SetRect 10, 10, 500, 250
+
+  Dim edt
+  Dim y : y = 25
+
+  Set edt = ui.NewCheckBox(GroupBox0)
+  edt.Common.SetRect 20, y-3, 20, 20
+  edt.Common.ControlName = "EITX_ExportAtShutdown"
+  edt.Checked = getExportAtShutdown()
+  edt.common.Enabled = True
+  '
+  Set edt = ui.NewLabel(GroupBox0)
+  edt.Common.SetRect 40, y, 100, 20
+  edt.Caption = "Export at shutdown"
+  edt.Autosize = False
+  edt.Common.Hint = "If option is set the iTunes library xml will be exported when MediaMonkey is closed. " & _
+    "Default is off."
+  '
+  y = y + 25
+
+
+  Set edt = ui.NewCheckBox(GroupBox0)
+  edt.Common.SetRect 20, y-3, 20, 20
+  edt.Common.ControlName = "EITX_PeriodicExport"
+  edt.Checked = getPeriodicExport()
+  edt.common.Enabled = True
+  '
+  Set edt = ui.NewLabel(GroupBox0)
+  edt.Common.SetRect 40, y, 100, 20
+  edt.Caption = "Periodic Export"
+  edt.Autosize = False
+  edt.Common.Hint = "If option is set the iTunes library xml will be exported every 60 minutes. " & _
+    "Default is off."
+  '
+  y = y + 25
+
+
+  Set edt = ui.NewLabel(GroupBox0)
+  edt.Common.SetRect 20, y+3, 100, 20
+  edt.Caption = "Filename:"
+  edt.Autosize = False
+  edt.Common.Hint = "The file name for the exported iTunes Music Library XML file. " & _
+    "If blank/empty the default value of `iTunes Music Library.xml` will be used."
+  '
+  Set edt = ui.NewEdit(GroupBox0)
+  edt.Common.SetRect 80, y, 455-80, 20
+  edt.Common.ControlName = "EITX_Filename"
+  edt.Text = getFilename()
+  edt.common.Enabled = True
+  '
+  Set edt = ui.NewButton(GroupBox0)
+  edt.Common.SetRect 460,y,20,20
+  edt.Caption = "..." ' would be nice if we could have a filer icon like in MediaMonkey system dialogs....
+  edt.Common.ControlName = "EITX_FileBrowser"    ' to open file browser.... see getExportFilename()
+  ' note: selecting a file would also imply setting the directory
+  edt.common.Enabled = False ' not yet implemented >> deactivate this control 
+  '
+  y = y + 25
+
+
+  Set edt = ui.NewLabel(GroupBox0)
+  edt.Common.SetRect 20, y+3, 100, 20
+  edt.Caption = "Directory:"
+  edt.Autosize = False
+  edt.Common.Hint = "The directory where the iTunes Music Library XML file will be stored. " & _
+    "If blank/empty this will be initialised to the default location. On Windows 10 this is typically the `%APPDATA%\MediaMonkey` directory."
+  
+  Set edt = ui.NewEdit(GroupBox0)
+  edt.Common.SetRect 80, y, 455-80, 20
+  edt.Common.ControlName = "EITX_Directory"
+  edt.Text = getDirectory()
+  edt.common.Enabled = True
+  '
+  Set edt = ui.NewButton(GroupBox0)
+  edt.Common.SetRect 460,y,20,20
+  edt.Caption = "..." ' would be nice if we could have a folder icon like in MediaMonkey system dialogs....
+  edt.Common.ControlName = "EITX_DirectoryBrowser"    ' to open dir browser.... see getExportFilename()
+  edt.common.Enabled = False ' not yet implemented >> deactivate this control
+  '
+  y = y + 25
+
+End Sub
+
+' Callback to store/process when configuration dialog is confimred
+Sub SaveSheet(Sheet)
+  setExportAtShutdown(Sheet.Common.ChildControl("EITX_ExportAtShutdown").Checked)
+  setPeriodicExport(Sheet.Common.ChildControl("EITX_PeriodicExport").Checked)
+  '
+  setFilename(Sheet.Common.ChildControl("EITX_Filename").Text)
+  setDirectory(Sheet.Common.ChildControl("EITX_Directory").Text)
 End Sub
