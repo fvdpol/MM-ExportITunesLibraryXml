@@ -259,6 +259,9 @@ function isValidDirectory(byVal myDirectory)
   end if
 
   ' potential test to check if the directory is actually writable...
+  '
+  ' for now assume all will be good and trap any errors writing to the
+  ' in the actual export routine.
   
   isValidDirectory = myResult
 end function 
@@ -702,7 +705,6 @@ End Sub
 Sub InitSheet(Sheet)
   Dim ini : Set ini = SDB.IniFile  
   Dim ui : Set ui = SDB.UI
-  'Dim i : i = 0
 
 	Dim GroupBox0
 	Set GroupBox0 = UI.NewGroupBox(Sheet)
@@ -712,8 +714,7 @@ Sub InitSheet(Sheet)
   Dim edt
   Dim y : y = 25
 
-
-Set edt = ui.NewCheckBox(GroupBox0)
+  Set edt = ui.NewCheckBox(GroupBox0)
   edt.Common.SetRect 20, y-3, 20, 20
   edt.Common.ControlName = "EITX_ExportAtShutdown"
   edt.Checked = getExportAtShutdown()
@@ -727,7 +728,6 @@ Set edt = ui.NewCheckBox(GroupBox0)
     "Default is off."
   '
   y = y + 25
-
 
 
   Set edt = ui.NewCheckBox(GroupBox0)
@@ -764,8 +764,7 @@ Set edt = ui.NewCheckBox(GroupBox0)
   edt.Caption = "..." ' would be nice if we could have a filer icon like in MediaMonkey system dialogs....
   edt.Common.ControlName = "EITX_FileBrowser"    ' to open file browser.... see getExportFilename()
   ' note: selecting a file would also imply setting the directory
-  edt.common.Enabled = False ' not yet implemented >> deactivate this control
-  
+  edt.common.Enabled = False ' not yet implemented >> deactivate this control 
   '
   y = y + 25
 
@@ -790,7 +789,6 @@ Set edt = ui.NewCheckBox(GroupBox0)
   edt.common.Enabled = False ' not yet implemented >> deactivate this control
   '
   y = y + 25
-
 
 End Sub
 
