@@ -201,22 +201,30 @@ end function
 
 ' Getter for the configured Directory
 function getDirectory()
-  ' FIXME - for now, simply return the default....
-    'edt.Text = ini.StringValue("ExportITunesXML","Directory")    
-  getDirectory = getDefaultDirectory()
+  dim myIni
+  dim myDirectory 
+  
+  set myIni = SDB.IniFile
+  myDirectory = cleanDirectoryName(myIni.StringValue("ExportITunesXML","Directory"))
+
+  if isValidDirectory(myDirectory) = False then
+    myDirectory = getDefaultDirectory()
+  end if
+
+  getDirectory = myDirectory
 end function
 
 ' Setter for the configured Directory
 sub setDirectory(byVal myDirectory)
+  dim myIni
+  myDirectory = cleanDirectoryName(myDirectory)
 
-  ' FIXME
-  ' do so basic cleanup; ensure the path ends with a directory separator
-  if right(myDirectory,1) <> "\" then
-    ' simply append the missing separator
-    myDirectory = myDirectory & "\"
-  end if 
-MsgBox "DBG setDirectory(): " & myDirectory
+  if isValidDirectory(myDirectory) = False then
+    myDirectory = getDefaultDirectory()
+  end if
 
+  set myIni = SDB.IniFile
+  myIni.StringValue("ExportITunesXML","Directory") = myDirectory
 
 end sub
 
@@ -228,13 +236,31 @@ function getDefaultDirectory()
   dim parts : parts = split(dbpath, "\")
   dim dbfilename : dbfilename = parts(UBound(parts))
   dim path : path = Mid(dbpath, 1, Len(dbpath) - Len(dbfilename))
+
   getDefaultDirectory = path
 end function
 
-' Return true if the directory is valid and writable by the user
+function cleanDirectoryName(byVal myDirectory)
+  ' do so basic cleanup; ensure the path ends with a directory separator
+  if right(myDirectory,1) <> "\" then
+    ' simply append the missing separator
+    myDirectory = myDirectory & "\"
+  end if 
+  cleanDirectoryName = myDirectory
+end function
+
+' Return true if the directory is defined
 function isValidDirectory(byVal myDirectory)
-  ' FIXME - for now, simply assume it is...
-  isValidDirectory = True
+  dim myResult : myResult = True
+
+  ' check for blank/empty directory
+  if trim(myDirectory) = "" or trim(myDirectory) = "\" then
+    myResult = False
+  end if
+
+  ' potential test to check if the directory is actually writable...
+  
+  isValidDirectory = myResult
 end function 
 
 
@@ -260,6 +286,10 @@ sub setFilename(byVal myFilename)
 
   ' trim any unsupported characters:
   myFilename = cleanFilename(myFilename)
+
+   if myFilename = "" then 
+    myFilename = getDefaultFilename() 
+  end if
 
   set myIni = SDB.IniFile
   myIni.StringValue("ExportITunesXML","Filename") = myFilename
@@ -392,6 +422,15 @@ sub Export
 
   set fso = SDB.Tools.FileSystem
   set fout = fso.CreateTextFile(filename, true)
+
+  if fout is nothing then
+     MsgBox SDB.Localize("Unable to write to '" & filename & "'."), 64, "iTunes Export Script"
+
+     ' cleanup
+     set fso = nothing
+     SDB.Objects(EXPORTING) = nothing
+    exit sub
+  end if
 
   set iter = SDB.Database.OpenSQL("select count(*) from SONGS")
   songCount = Int(iter.ValueByIndex(0)) ' needed for progress
