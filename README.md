@@ -20,7 +20,7 @@ Primary use-case for this script is to export the MediaMonkey library/playlists 
 | Mixx                          | 2.0.0_x64 2.1.3_x64 | Windows 10  | OK |
 | Mixx                          | 2.1.1_x64 | Windows 10  | NOK - Tracks read OK; only 5 or so playlists shown | 
 | Virtual DJ                    | 8.3 b4459 (2018) | Windows 10 | OK |
-| Serato                        | TBD |              | Unknown, feedback wanted   |
+| Serato DJ Pro                 | 2.0.3 + | Windows 10 | OK   |
 
 
 
