@@ -4,3 +4,4 @@ CopyToMMFolder.cmd
 *.mmip
 *.exe
 *.code-workspace
+*.zip

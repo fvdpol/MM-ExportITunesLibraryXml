@@ -17,11 +17,10 @@ Primary use-case for this script is to export the MediaMonkey library/playlists 
 | Media Monkey Gold             | 4.1.20.1864 4.1.21.1875 | Windows 10 | OK                                                                     |
 | Native Instruments Traktor DJ | 2.11.3.17 | Windows 10  | OK                                                                      |
 | Native Instruments Traktor DJ | 2.11.3.17 | MacOS Sierra | tracks / playlists read OK, file location needs to be updated/remapped |
-| Mixxx                         | 2.0.0_x64 2.1.3_x64 | Windows 10  | OK |
-| Mixxx                         | 2.1.1_x64 | Windows 10  | NOK - Tracks read OK; only 5 or so playlists shown | 
+| Mixxx                         | 2.0.0_x64 2.1.3_x64 2.1.4_x64 | Windows 10  | OK |
 | Virtual DJ                    | 8.3 b4459 (2018) | Windows 10 | OK |
 | Serato DJ                     | TBD    |              | Work in progress; see #10 for tips |
-| Pioneer Recordbox DJ          | 5.4.0  |              | Not working, under investigation, help wanted  |
+| Pioneer Recordbox DJ          | 5.4.0  |  Windows 10  | Work in progress |
 
 
 Reports on compatibility/issues with other software welcome.
