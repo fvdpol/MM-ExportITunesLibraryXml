@@ -20,6 +20,9 @@
 '         - correctly handle playlists with duplicate names 
 '         - export using same sort order as MediaMonkey
 '         - export parent before children (as per iTunes behaviour)
+' 1.6.3  reorder xml fields to (better) match iTunes format
+'        add Persistent ID for compatibility with Serato
+'        add Grouping in export
 
 option explicit     ' report undefined variables, ...
 
@@ -534,32 +537,42 @@ sub Export
       fout.WriteLine "        <key>" & Song.id & "</key>"
       fout.WriteLine "        <dict>   "
       addKey fout, "Track ID", Song.id, "integer"
-      addKey fout, "Name", escapeXML(Song.Title), "string"
-      addKey fout, "Artist", escapeXML(Song.ArtistName), "string"
-      addKey fout, "Composer", escapeXML(Song.MusicComposer), "string"
-      addKey fout, "Album Artist", escapeXML(Song.AlbumArtistName), "string"
-      addKey fout, "Album", escapeXML(Song.AlbumName), "string"
-      addKey fout, "Kind", escapeXML("MPEG audio file"), "string"
       addKey fout, "Size", Song.FileLength, "integer"
-      addKey fout, "Genre", escapeXML(Song.Genre), "string"
       addKey fout, "Total Time", Song.SongLength, "integer"
-      addKey fout, "Track Number", Song.TrackOrder, "integer" ' potential type problem with TrackOrderStr
-      addKey fout, "Disc Number", Song.DiscNumber, "integer" ' potential type problem with DiscNumberStr
-      addKey fout, "Play Count", Song.PlayCounter, "integer"
-      if Song.Rating >= 0 and Song.Rating <= 100 then
-        addKey fout, "Rating", Song.Rating, "integer" ' rating seems to be compatible in range (although not stored in same id3 tag)
-      end if
-      addKey fout, "Year", Song.Year, "integer"
+      if Song.DiscNumber >= 0 then addKey fout, "Disc Number", Song.DiscNumber, "integer" ' potential type problem with DiscNumberStr
+      ' Field not available in MM: <key>Disc Count</key>      
+      if Song.TrackOrder >= 0 then addKey fout, "Track Number", Song.TrackOrder, "integer" ' potential type problem with TrackOrderStr
+      ' Field not available in MM: <key>Track Count</key>
+      if Song.Year > 0 then addKey fout, "Year", Song.Year, "integer"
+      if Song.BPM > 0 then addKey fout, "BPM", Song.BPM, "string"
       addKey fout, "Date Modified", Song.FileModified, "date"
       addKey fout, "Date Added", Song.DateAdded, "date"
-      addKey fout, "Play Date UTC", Song.LastPlayed, "date"
       addKey fout, "Bit Rate", Int(Song.Bitrate / 1000), "integer"
       addKey fout, "Sample Rate", Song.SampleRate, "integer"
+      if Song.PlayCounter > 0 then addKey fout, "Play Count", Song.PlayCounter, "integer"
+      ' Missing: <key>Play Date</key> date in integer format ???
+      if Song.LastPlayed > 0 then addKey fout, "Play Date UTC", Song.LastPlayed, "date"
+      ' Field not available: <key>Skip Count</key><integer>1</integer>
+			' Field not available: <key>Skip Date</key><date>2018-10-19T16:06:26Z</date>
+			if Song.Rating >= 0 and Song.Rating <= 100 then
+        addKey fout, "Rating", Song.Rating, "integer" ' rating seems to be compatible in range (although not stored in same id3 tag)
+      end if
+			' Field not available: <key>Loved</key><true/>
+			' Field not available: <key>Compilation</key><true/>
+
+      addKey fout, "Persistent ID", Song.id, "string"   ' Field not available in MM, but simulate this as Serato needs this field
       addKey fout, "Track Type", escapeXML("File"), "string"
       addKey fout, "File Folder Count", -1, "integer"
       addKey fout, "Library Folder Count", -1, "integer"
-      addKey fout, "Comments", escapeXML(Song.Comment), "string"
-      addKey fout, "BPM", Song.BPM, "string"
+      addKey fout, "Name", escapeXML(Song.Title), "string"
+      if Song.ArtistName <> "" then addKey fout, "Artist", escapeXML(Song.ArtistName), "string"
+      if Song.AlbumArtistName <> "" then addKey fout, "Album Artist", escapeXML(Song.AlbumArtistName), "string"
+      if Song.MusicComposer <> "" then addKey fout, "Composer", escapeXML(Song.MusicComposer), "string"
+      if Song.AlbumName <> "" then addKey fout, "Album", escapeXML(Song.AlbumName), "string"
+      if Song.Grouping <> "" then addKey fout, "Grouping", escapeXML(Song.Grouping), "string"
+      if Song.Genre <> "" then addKey fout, "Genre", escapeXML(Song.Genre), "string"
+      addKey fout, "Kind", escapeXML("MPEG audio file"), "string"
+      if Song.Comment <> "" then addKey fout, "Comments", escapeXML(Song.Comment), "string"
       
       ' 10.10.2010: fixed: location was not correctly URI encoded before
       ' addKey fout, "Location", "file://localhost/" & Replace(Replace(Escape(Song.Path), "%5C", "/"), "%3A", ":"), "string"
