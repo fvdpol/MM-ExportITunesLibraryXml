@@ -21,8 +21,10 @@
 '         - export using same sort order as MediaMonkey
 '         - export parent before children (as per iTunes behaviour)
 ' 1.6.3  reorder xml fields to (better) match iTunes format
-'        add Persistent ID for compatibility with Serato
+'        add Persistent ID for compatibility with Serato DJ
 '        add Grouping in export
+'        add dummy Library Persistent ID to the header for compatibility with Pioneer Recordbox DJ
+'        mark playlists that have sub-playlists as 'folder' (for compatibility with Pioneer Recordbox DJ)
 
 option explicit     ' report undefined variables, ...
 
@@ -432,6 +434,12 @@ sub WritePlaylist(fout, progress, byval progressText, byval myPlaylist)
 		  addKey fout, "Parent Persistent ID", parentID, "string"
 	  end if 
     fout.WriteLine "            <key>All Items</key><true/>"
+
+    ' if this playlist has any childs playlists add the Folder=true flag to have Pioneer Recordbox correctly parse the folder structure
+    if (playlist.ChildPlaylists.count > 0) then
+			fout.WriteLine "            <key>Folder</key><true/>"
+    end if
+
     if tracks.Count > 0 then      
       fout.WriteLine "            <key>Playlist Items</key>"
       fout.WriteLine "            <array>"
@@ -510,6 +518,7 @@ sub Export
   fout.WriteLine "    <key>Application Version</key><string>7.6</string>"
   fout.WriteLine "    <key>Features</key><integer>5</integer>" ' whatever that means
   fout.WriteLine "    <key>Show Content Ratings</key><true/>"
+  fout.WriteLine "    <key>Library Persistent ID</key><string>null</string>" ' add dummy to keep Recordbox DJ Happy
   ' Fields not available in MM:
   ' fout.WriteLine "    <key>Music Folder</key><string>file://localhost/C:/....../iTunes/iTunes%20Music/</string>"
   ' fout.WriteLine "    <key>Library Persistent ID</key><string>4A9134D6F642512F</string>"

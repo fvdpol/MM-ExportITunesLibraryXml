@@ -86,8 +86,11 @@ Note that Native Instruments Traktor is known to ignore / filter-out playlists t
 ### Version 1.6.3
 _Work in progress_
 - reorder xml fields to (better) match iTunes format
-- add Persistent ID for compatibility with Serato
+- add Persistent ID for compatibility with Serato DJ
 - add Grouping in export
+- add dummy Library Persistent ID to the header for compatibility with Pioneer Recordbox DJ
+- mark playlists that have sub-playlists as 'folder' (for compatibility with Pioneer Recordbox DJ)
+
 
 ### Version 1.6.2
 _Released on September 17, 2018_
