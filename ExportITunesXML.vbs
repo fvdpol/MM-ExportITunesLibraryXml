@@ -25,6 +25,7 @@
 '        add Grouping in export
 '        add dummy Library Persistent ID to the header for compatibility with Pioneer Recordbox DJ
 '        mark playlists that have sub-playlists as 'folder' (for compatibility with Pioneer Recordbox DJ)
+'        add "Play Date" (timestamp in numeric format) in addition to the "Play Date UTC"
 
 option explicit     ' report undefined variables, ...
 
@@ -388,6 +389,19 @@ function getExportFilename()
 end function
 
 
+Function ConvertToUnixTimeStamp(byVal myDateTime) 
+ Dim d : d = CDate(myDateTime)
+ ConvertToUnixTimeStamp = DateDiff("s", "01/01/1970 00:00:00", d)
+End Function
+
+
+' similar to the unix timestamp, but then seconds since 1 jan 1904 (whattah????)
+Function ConvertToItunesIntegerTimeStamp(byVal myDateTime) 
+ Dim d : d = CDate(myDateTime)
+ ConvertToItunesIntegerTimeStamp = DateDiff("s", "01/01/1904 00:00:00", d)
+End Function
+
+
 ' find the parent playlist ID for given playlist. Returns 0 if no parent exists
 function getparentID(byVal myPlaylist)
 	dim iter
@@ -559,13 +573,16 @@ sub Export
       addKey fout, "Bit Rate", Int(Song.Bitrate / 1000), "integer"
       addKey fout, "Sample Rate", Song.SampleRate, "integer"
       if Song.PlayCounter > 0 then addKey fout, "Play Count", Song.PlayCounter, "integer"
-      ' Missing: <key>Play Date</key> date in integer format ???
-      if Song.LastPlayed > 0 then addKey fout, "Play Date UTC", Song.LastPlayed, "date"
+      if Song.LastPlayed > 0 then 
+        addKey fout, "Play Date", ConvertToItunesIntegerTimeStamp(Song.LastPlayed), "integer"
+        addKey fout, "Play Date UTC", Song.LastPlayed, "date"
+      end if
       ' Field not available: <key>Skip Count</key><integer>1</integer>
 			' Field not available: <key>Skip Date</key><date>2018-10-19T16:06:26Z</date>
 			if Song.Rating >= 0 and Song.Rating <= 100 then
         addKey fout, "Rating", Song.Rating, "integer" ' rating seems to be compatible in range (although not stored in same id3 tag)
       end if
+
 			' Field not available: <key>Loved</key><true/>
 			' Field not available: <key>Compilation</key><true/>
 
