@@ -44,12 +44,13 @@ A number of settings that were initially harcoded / configured in the script can
 
 Navigate to Tools menu -> Options, and open the "Export to iTunes XML configuration dialog within the Library section. 
 
-| Setting | Description |
-|---------|-------------|
+| Setting            | Description |
+|--------------------|-------------|
 | Export at Shutdown | If option is set the iTunes library xml will be exported when MediaMonkey is closed. <br> Default is off.| 
-| Periodic Export | If option is set the iTunes library xml will be exported every 60 minutes. <br> Default is off.|
-| Filename | The file name for the exported iTunes Music Library XML file. <br> If blank/empty the default value of `iTunes Music Library.xml` will be used.|
-| Directory | The directory where the iTunes Music Library XML file will be stored. <br> If blank/empty this will be initialised to the default location. On Windows 10 this is typically the `%APPDATA%\MediaMonkey` directory. |
+| Periodic Export    | If option is set the iTunes library xml will be exported every 60 minutes. <br> Default is off.|
+| Filename           | The file name for the exported iTunes Music Library XML file. <br> If blank/empty the default value of `iTunes Music Library.xml` will be used.|
+| Directory          | The directory where the iTunes Music Library XML file will be stored. <br> If blank/empty this will be initialised to the default location. On Windows 10 this is typically the `%APPDATA%\MediaMonkey` directory. |
+| Exclude export of Playlists | If option is set the iTunes library xml will only contain the tracks; the playlists will be excluded. <br> Default is off.|
 
 
 Note: Serato expects the xml file to be available in the original location where iTunes stores the file, which is typically in `C: \Users\{user}\Music\iTunes`
@@ -84,6 +85,11 @@ Note that Native Instruments Traktor is known to ignore / filter-out playlists t
 
 
 ## Version History
+
+### Version 1.6.4
+_in progress_
+- add feature/option to exclude the playlist section in the generated xml file
+
 
 ### Version 1.6.3
 _Released on November 16, 2018_
