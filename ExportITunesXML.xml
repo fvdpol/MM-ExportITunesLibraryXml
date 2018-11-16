@@ -2,7 +2,7 @@
 <SoftwareVersion>
  <VersionMajor>1</VersionMajor>
  <VersionMinor>6</VersionMinor>
- <VersionRelease>2</VersionRelease>
+ <VersionRelease>3</VersionRelease>
  <VersionBuild>0</VersionBuild>
- <UpdateURL>https://github.com/fvdpol/MM-ExportITunesLibraryXml/releases/download/v1.6.2/ExportITunesXML_v1.6.2.mmip</UpdateURL>
+ <UpdateURL>https://github.com/fvdpol/MM-ExportITunesLibraryXml/releases/download/v1.6.3/ExportITunesXML_v1.6.3.mmip</UpdateURL>
 </SoftwareVersion>
