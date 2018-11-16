@@ -12,7 +12,7 @@ Primary use-case for this script is to export the MediaMonkey library/playlists 
 
 ### Tested Versions:
 
-| Software                      | Version   | OS          | Note                                                                    |
+| Software                      | Version   | OS          | Note                                                          |
 |-------------------------------|-----------|-------------|---------------------------------------------------------------|
 | Media Monkey Gold             | 4.1.20.1864 4.1.21.1875 | Windows 10 | OK                                                                     |
 | Native Instruments Traktor DJ | 2.11.3.17 | Windows 10  | OK                                                                      |
@@ -21,6 +21,8 @@ Primary use-case for this script is to export the MediaMonkey library/playlists 
 | Virtual DJ                    | 8.3 b4459 (2018) | Windows 10 | OK |
 | Serato DJ                     | TBD    |              | Work in progress; see #10 for tips |
 | Pioneer Recordbox DJ          | 5.4.0  |  Windows 10  | Work in progress |
+| Plex                          |        |              | file location needs to be updated/remapped if Plex is running on Linux |
+| Musicbee                      |        |              | |
 
 
 Reports on compatibility/issues with other software welcome.
@@ -83,12 +85,13 @@ Note that Native Instruments Traktor is known to ignore / filter-out playlists t
 ## Version History
 
 ### Version 1.6.3
-_Work in progress_
+_Released on November 16, 2018_
 - reorder xml fields to (better) match iTunes format
 - add Persistent ID for compatibility with Serato DJ
 - add Grouping in export
 - add dummy Library Persistent ID to the header for compatibility with Pioneer Recordbox DJ
 - mark playlists that have sub-playlists as 'folder' (for compatibility with Pioneer Recordbox DJ)
+- add Play Date in Apple Numeric format (seconds since 1/1/1904)
 
 
 ### Version 1.6.2
