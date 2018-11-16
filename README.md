@@ -52,6 +52,7 @@ Navigate to Tools menu -> Options, and open the "Export to iTunes XML configurat
 | Directory | The directory where the iTunes Music Library XML file will be stored. <br> If blank/empty this will be initialised to the default location. On Windows 10 this is typically the `%APPDATA%\MediaMonkey` directory. |
 
 
+Note: Serato expects the xml file to be available in the original location where iTunes stores the file, which is typically in `C: \Users\{user}\Music\iTunes`
 
 ## Nested playlists, Folders and Traktor
 
