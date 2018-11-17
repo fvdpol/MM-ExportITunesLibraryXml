@@ -19,10 +19,11 @@ Primary use-case for this script is to export the MediaMonkey library/playlists 
 | Native Instruments Traktor DJ | 2.11.3.17 | MacOS Sierra | tracks / playlists read OK, file location needs to be updated/remapped |
 | Mixxx                         | 2.0.0_x64 2.1.3_x64 2.1.4_x64 | Windows 10  | OK |
 | Virtual DJ                    | 8.3 b4459 (2018) | Windows 10 | OK |
-| Serato DJ                     | TBD    |              | Work in progress; see #10 for tips |
+| Serato DJ Pro                 | 2.0.3 + | Windows 10 | OK   |
 | Pioneer Recordbox DJ          | 5.4.0  |  Windows 10  | Work in progress |
 | Plex                          |        |              | file location needs to be updated/remapped if Plex is running on Linux |
 | Musicbee                      |        |              | |
+
 
 
 Reports on compatibility/issues with other software welcome.
