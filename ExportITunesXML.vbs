@@ -29,6 +29,9 @@
 ' 1.6.4 add feature/option to exclude the playlist section in the generated xml file
 '       add DebugMsg() function and support framework
 '       prevent Anti Malware Scan Interface AMSI_ATTRIBUTE_CONTENT_NAME Error 0x80070490 being raised
+'       resizable option dialog
+' 
+'
 option explicit     ' report undefined variables, ...
 
 Dim Debug
