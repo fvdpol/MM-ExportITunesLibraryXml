@@ -29,6 +29,9 @@
 ' 1.6.4 add feature/option to exclude the playlist section in the generated xml file
 '       add DebugMsg() function and support framework
 '       prevent Anti Malware Scan Interface AMSI_ATTRIBUTE_CONTENT_NAME Error 0x80070490 being raised
+'       resizable option dialog
+' 
+'
 option explicit     ' report undefined variables, ...
 
 Dim Debug
@@ -803,8 +806,10 @@ sub OnStartup
   Call Script.RegisterEvent(btn,"OnClick","OnToolbar")
 
   ' Register Option sheet as child under "Library" := -3
-  Call SDB.UI.AddOptionSheet("Export to iTunes XML",Script.ScriptPath,"InitSheet","SaveSheet",-3)
-
+  'myOptionSheet = SDB.UI.AddOptionSheet("Export to iTunes XML",Script.ScriptPath,"InitSheet","SaveSheet",-3)
+  Dim myOptionSheet
+  myOptionSheet = SDB.UI.AddOptionSheetEx("Export to iTunes XML",Script.ScriptPath,"InitSheet","SaveSheet","CancelSheet",-3)
+  
   ' Register handler for the periodic export
   dim exportTimer : set exportTimer = SDB.CreateTimer(3600000) ' export every 60 minutes (arg in ms)
   Set SDB.Objects("ExportITunesXMLExportTimer") = exportTimer
@@ -841,8 +846,15 @@ Sub InitSheet(Sheet)
   Dim ini : Set ini = SDB.IniFile
   Dim ui : Set ui = SDB.UI
 
+  DebugMsg("InitSheet()")
+  
+  Sheet.Common.ControlName = "EITX_ConfigSheet"
+  Script.RegisterEvent Sheet.Common, "OnResize", "ResizeSettingSheet"
+
+
 	Dim GroupBox0
 	Set GroupBox0 = UI.NewGroupBox(Sheet)
+  GroupBox0.Common.ControlName = "EITX_Groupbox0"
 	GroupBox0.Caption = "Export to iTunes XML Configuration"
 	GroupBox0.Common.SetRect 10, 10, 500, 250
 
@@ -940,10 +952,46 @@ Sub InitSheet(Sheet)
   '
   y = y + 25
 
+  ' force resize event to make the layout consistent
+  Call ResizeSettingSheet(Sheet)
+
 End Sub
+
+
+Sub ResizeSettingSheet(Control)
+  Dim FrameWidth 
+  Dim ctrl
+
+  DebugMsg("ResizeSettingSheet()")
+'  DebugMsg("ControlName = " & Control.Common.ControlName)
+  DebugMsg("Width = " & Control.Common.Width)
+
+  FrameWidth = Control.Common.Width
+  Dim Sheet : Set Sheet = Control.Common.TopParent 
+  
+  Set ctrl = Sheet.Common.ChildControl("EITX_Groupbox0")
+  ctrl.Common.Width = FrameWidth - 20
+
+  Set ctrl = Sheet.Common.ChildControl("EITX_Filename")
+  ctrl.Common.Width = FrameWidth - 20 - 35 - 80
+
+  Set ctrl = Sheet.Common.ChildControl("EITX_FileBrowser")
+  ctrl.Common.Left = FrameWidth - 20 - 30
+
+  Set ctrl = Sheet.Common.ChildControl("EITX_Directory")
+  ctrl.Common.Width = FrameWidth - 20 - 35 - 80
+
+  Set ctrl = Sheet.Common.ChildControl("EITX_DirectoryBrowser")
+  ctrl.Common.Left = FrameWidth - 20 - 30
+
+End Sub
+
 
 ' Callback to store/process when configuration dialog is confimred
 Sub SaveSheet(Sheet)
+  DebugMsg("SaveSheet")
+  Script.UnRegisterEvents Sheet.Common
+  '
   setExportAtShutdown(Sheet.Common.ChildControl("EITX_ExportAtShutdown").Checked)
   setPeriodicExport(Sheet.Common.ChildControl("EITX_PeriodicExport").Checked)
   '
@@ -951,4 +999,10 @@ Sub SaveSheet(Sheet)
   setDirectory(Sheet.Common.ChildControl("EITX_Directory").Text)
   '
   setNoPlaylistExport(Sheet.Common.ChildControl("EITX_NoPlaylistExport").Checked)
+
+End Sub
+
+Sub CancelSheet(Sheet)
+  DebugMsg("CancelSheet")
+  Script.UnRegisterEvents Sheet.Common
 End Sub
