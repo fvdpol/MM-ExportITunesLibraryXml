@@ -20,12 +20,13 @@
 '         - correctly handle playlists with duplicate names 
 '         - export using same sort order as MediaMonkey
 '         - export parent before children (as per iTunes behaviour)
-' 1.6.3  reorder xml fields to (better) match iTunes format
-'        add Persistent ID for compatibility with Serato DJ
-'        add Grouping in export
-'        add dummy Library Persistent ID to the header for compatibility with Pioneer Recordbox DJ
-'        mark playlists that have sub-playlists as 'folder' (for compatibility with Pioneer Recordbox DJ)
-'        add "Play Date" (timestamp in numeric format) in addition to the "Play Date UTC"
+' 1.6.3 reorder xml fields to (better) match iTunes format
+'       add Persistent ID for compatibility with Serato DJ
+'       add Grouping in export
+'       add dummy Library Persistent ID to the header for compatibility with Pioneer Recordbox DJ
+'       mark playlists that have sub-playlists as 'folder' (for compatibility with Pioneer Recordbox DJ)
+'       add "Play Date" (timestamp in numeric format) in addition to the "Play Date UTC"
+' 1.6.4 add feature/option to exclude the playlist section in the generated xml file
 
 option explicit     ' report undefined variables, ...
 
@@ -323,6 +324,45 @@ function cleanFilename(byVal myFilename)
   next
  cleanFilename = trim(myFilename)
 End Function
+
+
+' Getter for the configured NoPlaylistExport boolean
+function getNoPlaylistExport()
+  dim myIni
+  dim myValue
+  dim myBool
+  
+  set myIni = SDB.IniFile
+  myValue = cleanFilename(myIni.StringValue("ExportITunesXML","NoPlaylistExport"))
+
+  ' parse ini value to boolean; use default if not defined as 0/1
+  if myValue = "0" then 
+    myBool = False
+  elseif myValue = "1" then
+    myBool = True
+  else
+    myBool = getDefaultNoPlaylistExport()
+  end if
+
+  getNoPlaylistExport = myBool
+end function
+'
+' Setter for the configured ExportAtShutdown boolean
+sub setNoPlaylistExport(byVal myBool)
+  dim myIni
+  set myIni = SDB.IniFile
+
+  if myBool then
+    myIni.StringValue("ExportITunesXML","NoPlaylistExport") = "1"
+  else
+    myIni.StringValue("ExportITunesXML","NoPlaylistExport") = "0"
+  end if
+end sub
+'
+function getDefaultNoPlaylistExport()
+  getDefaultNoPlaylistExport = False
+end function 
+
 
 
 ' N must be numberic. Return value is N converted to a string, padded with
@@ -636,7 +676,7 @@ sub Export
   ' are not converted into iTunes auto-playlists. A consequence of this is that
   ' e.g. randomized or size-limited playlists will contain a static snapshot taken
   ' at export time.
-  if playlistCount > 0 and not Progress.Terminate and not Script.Terminate then
+  if playlistCount > 0 and getNoPlaylistExport() = False and not Progress.Terminate and not Script.Terminate then
     fout.WriteLine "    <key>Playlists</key>"
     fout.WriteLine "    <array>"
 
@@ -828,6 +868,21 @@ Sub InitSheet(Sheet)
   edt.common.Enabled = False ' not yet implemented >> deactivate this control
   '
   y = y + 25
+  
+  Set edt = ui.NewCheckBox(GroupBox0)
+  edt.Common.SetRect 20, y-3, 20, 20
+  edt.Common.ControlName = "EITX_NoPlaylistExport"
+  edt.Checked = getNoPlaylistExport()
+  edt.common.Enabled = True
+  '
+  Set edt = ui.NewLabel(GroupBox0)
+  edt.Common.SetRect 40, y, 100, 20
+  edt.Caption = "Exclude export of Playlists"
+  edt.Autosize = False
+  edt.Common.Hint = "If option is set the iTunes library xml will only contain the tracks; the playlists will be excluded. " & _
+    "Default is off."
+  '
+  y = y + 25
 
 End Sub
 
@@ -838,4 +893,6 @@ Sub SaveSheet(Sheet)
   '
   setFilename(Sheet.Common.ChildControl("EITX_Filename").Text)
   setDirectory(Sheet.Common.ChildControl("EITX_Directory").Text)
+  '
+  setNoPlaylistExport(Sheet.Common.ChildControl("EITX_NoPlaylistExport").Checked)
 End Sub
