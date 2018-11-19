@@ -20,32 +20,47 @@
 '         - correctly handle playlists with duplicate names 
 '         - export using same sort order as MediaMonkey
 '         - export parent before children (as per iTunes behaviour)
-' 1.6.3  reorder xml fields to (better) match iTunes format
-'        add Persistent ID for compatibility with Serato DJ
-'        add Grouping in export
-'        add dummy Library Persistent ID to the header for compatibility with Pioneer Recordbox DJ
-'        mark playlists that have sub-playlists as 'folder' (for compatibility with Pioneer Recordbox DJ)
-'        add "Play Date" (timestamp in numeric format) in addition to the "Play Date UTC"
+' 1.6.3 reorder xml fields to (better) match iTunes format
+'       add Persistent ID for compatibility with Serato DJ
+'       add Grouping in export
+'       add dummy Library Persistent ID to the header for compatibility with Pioneer Recordbox DJ
+'       mark playlists that have sub-playlists as 'folder' (for compatibility with Pioneer Recordbox DJ)
+'       add "Play Date" (timestamp in numeric format) in addition to the "Play Date UTC"
+' 1.6.4 add DebugMsg() function and support framework
+'       prevent Anti Malware Scan Interface AMSI_ATTRIBUTE_CONTENT_NAME Error 0x80070490 being raised 
 
 option explicit     ' report undefined variables, ...
 
+Dim Debug
+Debug = getDebug()
+setDebug(Debug) ' write the flag in config file (for manual easy changing)
 '  ------------------------------------------------------------------
 const EXPORTING = "itunes_export_active"
 dim scriptControl
+
+sub DebugMsg(ByVal myMsg)
+  if Debug then SDB.Tools.OutputDebugString("ExportITunesXML: " & myMsg)
+end sub
 
 ' Returns encoded URI for provided location string. 
 function encodeLocation(ByVal location)
   ' 10.10.2010: need jscript engine to access its encodeURI function which is not 
   ' available in vbscript
+
   if isEmpty(scriptControl) then
     set scriptControl = CreateObject("ScriptControl")
     scriptControl.Language = "JScript"
+    '
+    ' running the JScript function (scriptControl.Run()) results in an error being logged in DbgView
+    ' [14856] [2018-11-18 18:17:37.828] [error  ] [AMSI       ] [14856: 6220] AMSI_ATTRIBUTE_CONTENT_NAME Error 0x80070490
+    ' >> AMSI is the Windows "Anti Malware Scan Interface"; used by Windows Defender and AVG
+    ' setting the AllowUI to false prevents these errors from being raised
+    scriptControl.AllowUI = False  
   end if
-
   location = replace(location, "\", "/")
-  location = replace(location, "&", "&")
   encodeLocation = scriptControl.Run("encodeURI", location)
-  encodeLocation = replace(encodeLocation, "#", "%23")
+  encodeLocation = replace(encodeLocation, "#", "%23")    ' # is not permitted in path
+  encodeLocation = replace(encodeLocation, "&", "&#38;")  ' amparsant needs to be escaped
 end function
 
 ' Returns UTF8 equivalent string of the provided Unicode codepoint c.
@@ -131,6 +146,44 @@ function escapeXML(ByVal srcstring)
   wend
   escapeXML = srcstring
 end function
+
+
+' Getter for the configured Debug boolean
+function getDebug()
+  dim myIni
+  dim myValue
+  dim myBool
+  
+  set myIni = SDB.IniFile
+  myValue = cleanFilename(myIni.StringValue("ExportITunesXML","Debug"))
+
+  ' parse ini value to boolean; use default if not defined as 0/1
+  if myValue = "0" then 
+    myBool = False
+  elseif myValue = "1" then
+    myBool = True
+  else
+    myBool = getDefaultDebug()
+  end if
+
+  getDebug = myBool
+end function
+'
+' Setter for the configured Debug boolean
+sub setDebug(byVal myBool)
+  dim myIni
+  set myIni = SDB.IniFile
+
+  if myBool then
+    myIni.StringValue("ExportITunesXML","Debug") = "1"
+  else
+    myIni.StringValue("ExportITunesXML","Debug") = "0"
+  end if
+end sub
+'
+function getDefaultDebug()
+  getDefaultDebug = False
+end function 
 
 
 ' Getter for the configured ExportAtShutdown boolean
@@ -492,6 +545,8 @@ sub Export
     exit sub
   end if
 
+  DebugMsg("Export starting...")
+
   dim filename, fso, iter, songCount, fout, progress, song, playlistCount
   dim progressText, i, j, tracks, playlist
   
@@ -599,13 +654,9 @@ sub Export
       if Song.Genre <> "" then addKey fout, "Genre", escapeXML(Song.Genre), "string"
       addKey fout, "Kind", escapeXML("MPEG audio file"), "string"
       if Song.Comment <> "" then addKey fout, "Comments", escapeXML(Song.Comment), "string"
-      
-      ' 10.10.2010: fixed: location was not correctly URI encoded before
-      ' addKey fout, "Location", "file://localhost/" & Replace(Replace(Escape(Song.Path), "%5C", "/"), "%3A", ":"), "string"
-      ' addKey fout, "Location", encodeLocation("file://localhost/" & Song.Path), "string"
-      ' 04.07.2018: amparsant needs to be escaped
-      addKey fout, "Location", Replace(encodeLocation("file://localhost/" & Song.Path),"&","&#38;"), "string"
 
+      addKey fout, "Location", encodeLocation("file://localhost/" & Song.Path), "string"
+      
       ' TODO artwork?
       ' addKey fout, "Artwork Count", 0, "integer"
       ' TODO convert to iTunes rating range. MM: -99999...?. iTunes: -255 (silent) .. 255
@@ -657,6 +708,8 @@ sub Export
     fso.DeleteFile(filename) ' remove the output file if terminated
   end if
   SDB.Objects(EXPORTING) = nothing
+
+  DebugMsg("Export finished")
 end sub
 
 
@@ -696,6 +749,7 @@ end sub
 
 ' Called when MM starts up
 sub OnStartup
+  DebugMsg("OnStartup()")
   ' Create and register toolbar button
   Dim btn : Set btn = SDB.Objects("ExportITunesXMLButton")
   If btn Is Nothing Then
@@ -719,10 +773,12 @@ sub OnStartup
 
   ' Register handler for the export on shutdown
   Script.RegisterEvent SDB,"OnShutdown","shutdownExport"
+  DebugMsg("OnStartup() finished")
 end sub
 
 
 Sub OnInstall()
+  DebugMsg("OnInstall()")
   'Add entries to script.ini if you need to show up in the Scripts menu
   Dim inip : inip = SDB.ScriptsPath & "Scripts.ini"
   Dim inif : Set inif = SDB.Tools.IniFileByPath(inip)
@@ -738,6 +794,7 @@ Sub OnInstall()
     SDB.RefreshScriptItems
   End If
   Call OnStartup()
+  DebugMsg("OnInstall() finished")
 End Sub
 
 ' Callback to build the configuration dialog

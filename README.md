@@ -55,6 +55,13 @@ Navigate to Tools menu -> Options, and open the "Export to iTunes XML configurat
 
 Note: Serato expects the xml file to be available in the original location where iTunes stores the file, which is typically in `C: \Users\{user}\Music\iTunes`
 
+## Script Debugging
+
+For better/easier debugging on the script a messages can be logged to the MediaMonkey debug facility using the `DebugMsg(string)` function. 
+To view the output 
+- set the Debug flag in the [ExportITunesXML] section in the MediaMonkey.ini file to 1
+- use the Microsoft/Sysinternals DebugView tool, available from https://docs.microsoft.com/en-us/sysinternals/downloads/debugview
+
 ## Nested playlists, Folders and Traktor
 
 Apple iTunes and MediaMonkey handle nested playlists / folders in a different way. Due to this difference the result in applications like Native Instruments Traktor may sometimes not be what one expects.
