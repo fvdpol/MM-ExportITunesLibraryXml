@@ -17,7 +17,7 @@
 '       dynamically configurable options for export at shutdown and periodic export
 '       dynamically configurable filename and directory
 '       refactor logic to write playlists:
-'         - correctly handle playlists with duplicate names 
+'         - correctly handle playlists with duplicate names
 '         - export using same sort order as MediaMonkey
 '         - export parent before children (as per iTunes behaviour)
 ' 1.6.3 reorder xml fields to (better) match iTunes format
@@ -27,26 +27,40 @@
 '       mark playlists that have sub-playlists as 'folder' (for compatibility with Pioneer Recordbox DJ)
 '       add "Play Date" (timestamp in numeric format) in addition to the "Play Date UTC"
 ' 1.6.4 add feature/option to exclude the playlist section in the generated xml file
-
+'       add DebugMsg() function and support framework
+'       prevent Anti Malware Scan Interface AMSI_ATTRIBUTE_CONTENT_NAME Error 0x80070490 being raised
 option explicit     ' report undefined variables, ...
 
+Dim Debug
+Debug = getDebug()
+setDebug(Debug) ' write the flag in config file (for manual easy changing)
 '  ------------------------------------------------------------------
 const EXPORTING = "itunes_export_active"
 dim scriptControl
 
-' Returns encoded URI for provided location string. 
+sub DebugMsg(ByVal myMsg)
+  if Debug then SDB.Tools.OutputDebugString("ExportITunesXML: " & myMsg)
+end sub
+
+' Returns encoded URI for provided location string.
 function encodeLocation(ByVal location)
-  ' 10.10.2010: need jscript engine to access its encodeURI function which is not 
+  ' 10.10.2010: need jscript engine to access its encodeURI function which is not
   ' available in vbscript
+
   if isEmpty(scriptControl) then
     set scriptControl = CreateObject("ScriptControl")
     scriptControl.Language = "JScript"
+    '
+    ' running the JScript function (scriptControl.Run()) results in an error being logged in DbgView
+    ' [14856] [2018-11-18 18:17:37.828] [error  ] [AMSI       ] [14856: 6220] AMSI_ATTRIBUTE_CONTENT_NAME Error 0x80070490
+    ' >> AMSI is the Windows "Anti Malware Scan Interface"; used by Windows Defender and AVG
+    ' setting the AllowUI to false prevents these errors from being raised
+    scriptControl.AllowUI = False
   end if
-
   location = replace(location, "\", "/")
-  location = replace(location, "&", "&")
   encodeLocation = scriptControl.Run("encodeURI", location)
-  encodeLocation = replace(encodeLocation, "#", "%23")
+  encodeLocation = replace(encodeLocation, "#", "%23")    ' # is not permitted in path
+  encodeLocation = replace(encodeLocation, "&", "&#38;")  ' amparsant needs to be escaped
 end function
 
 ' Returns UTF8 equivalent string of the provided Unicode codepoint c.
@@ -75,7 +89,7 @@ function Utf8(ByVal c)
     b3 = ((c - b1 - (64 * b2)) / 4096) mod 64
     b4 = ((c - b1 - (64 * b2) - (4096 * b3)) / 262144)
     Utf8 = chr(&hf0 + b4) & chr(&h80 + b3) & chr(&h80 + b2) & chr(&h80 + b1)
-    
+
   else ' error - use replacement character
     Utf8 = chr(&hef) & chr(&hbf) & chr(&hdb)
   end if
@@ -114,7 +128,7 @@ function escapeXML(ByVal srcstring)
         ' remove the 2nd code (lower-pair) from the string
         srcstring = mid(srcstring, 1, i)  + Mid(srcstring, i + 2, Len(srcstring))
       end if
-      
+
       ' Important: reject control characters except tab, cr, lf. See also http://www.w3.org/TR/1998/REC-xml-19980210.html#NT-Char
       if codepoint > 127 or currentchar = vbTab or currentchar = vbLf or currentchar = vbCr then
         replacement = Utf8(codepoint)
@@ -122,7 +136,7 @@ function escapeXML(ByVal srcstring)
         replacement = ""
       end if
     end if
-    
+
     if not IsNull(replacement) then ' otherwise we keep the original srcstring character (common case)
       srcstring = mid(srcstring, 1, i - 1) + replacement + Mid(srcstring, i + 1, Len(srcstring))
       i = i + len(replacement)
@@ -134,17 +148,55 @@ function escapeXML(ByVal srcstring)
 end function
 
 
+' Getter for the configured Debug boolean
+function getDebug()
+  dim myIni
+  dim myValue
+  dim myBool
+
+  set myIni = SDB.IniFile
+  myValue = cleanFilename(myIni.StringValue("ExportITunesXML","Debug"))
+
+  ' parse ini value to boolean; use default if not defined as 0/1
+  if myValue = "0" then
+    myBool = False
+  elseif myValue = "1" then
+    myBool = True
+  else
+    myBool = getDefaultDebug()
+  end if
+
+  getDebug = myBool
+end function
+'
+' Setter for the configured Debug boolean
+sub setDebug(byVal myBool)
+  dim myIni
+  set myIni = SDB.IniFile
+
+  if myBool then
+    myIni.StringValue("ExportITunesXML","Debug") = "1"
+  else
+    myIni.StringValue("ExportITunesXML","Debug") = "0"
+  end if
+end sub
+'
+function getDefaultDebug()
+  getDefaultDebug = False
+end function
+
+
 ' Getter for the configured ExportAtShutdown boolean
 function getExportAtShutdown()
   dim myIni
   dim myValue
   dim myBool
-  
+
   set myIni = SDB.IniFile
   myValue = cleanFilename(myIni.StringValue("ExportITunesXML","ExportAtShutdown"))
 
   ' parse ini value to boolean; use default if not defined as 0/1
-  if myValue = "0" then 
+  if myValue = "0" then
     myBool = False
   elseif myValue = "1" then
     myBool = True
@@ -169,24 +221,24 @@ end sub
 '
 function getDefaultExportAtShutdown()
   getDefaultExportAtShutdown = False
-end function 
+end function
 
 ' Getter for the configured PeriodicExport boolean
 function getPeriodicExport()
   dim myIni
   dim myValue
   dim myBool
-  
+
   set myIni = SDB.IniFile
   myValue = cleanFilename(myIni.StringValue("ExportITunesXML","PeriodicExport"))
 
   ' parse ini value to boolean; use default if not defined as 0/1
-  if myValue = "0" then 
+  if myValue = "0" then
     myBool = False
   elseif myValue = "1" then
     myBool = True
   else
-    myBool = getDefaultPeriodicExport() 
+    myBool = getDefaultPeriodicExport()
   end if
 
   getPeriodicExport = myBool
@@ -206,15 +258,15 @@ end sub
 '
 function getDefaultPeriodicExport()
   getDefaultPeriodicExport = False
-end function 
+end function
 
 
 
 ' Getter for the configured Directory
 function getDirectory()
   dim myIni
-  dim myDirectory 
-  
+  dim myDirectory
+
   set myIni = SDB.IniFile
   myDirectory = cleanDirectoryName(myIni.StringValue("ExportITunesXML","Directory"))
 
@@ -241,7 +293,7 @@ end sub
 
 ' Get default for the configured Directory
 function getDefaultDirectory()
-  ' The default file location will be in the same folder as the database 
+  ' The default file location will be in the same folder as the database
   ' because this folder is writable and user specific.
   dim dbpath : dbpath = SDB.Database.Path
   dim parts : parts = split(dbpath, "\")
@@ -256,7 +308,7 @@ function cleanDirectoryName(byVal myDirectory)
   if right(myDirectory,1) <> "\" then
     ' simply append the missing separator
     myDirectory = myDirectory & "\"
-  end if 
+  end if
   cleanDirectoryName = myDirectory
 end function
 
@@ -273,22 +325,22 @@ function isValidDirectory(byVal myDirectory)
   '
   ' for now assume all will be good and trap any errors writing to the
   ' in the actual export routine.
-  
+
   isValidDirectory = myResult
-end function 
+end function
 
 
 ' Getter for the configured Filename
 ' if filename is undefined/blank then return the default
 function getFilename()
   dim myIni
-  dim myFilename 
-  
+  dim myFilename
+
   set myIni = SDB.IniFile
   myFilename = cleanFilename(myIni.StringValue("ExportITunesXML","Filename"))
-  
-  if myFilename = "" then 
-    myFilename = getDefaultFilename() 
+
+  if myFilename = "" then
+    myFilename = getDefaultFilename()
   end if
 
   getFilename = myFilename
@@ -301,8 +353,8 @@ sub setFilename(byVal myFilename)
   ' trim any unsupported characters:
   myFilename = cleanFilename(myFilename)
 
-   if myFilename = "" then 
-    myFilename = getDefaultFilename() 
+   if myFilename = "" then
+    myFilename = getDefaultFilename()
   end if
 
   set myIni = SDB.IniFile
@@ -331,12 +383,12 @@ function getNoPlaylistExport()
   dim myIni
   dim myValue
   dim myBool
-  
+
   set myIni = SDB.IniFile
   myValue = cleanFilename(myIni.StringValue("ExportITunesXML","NoPlaylistExport"))
 
   ' parse ini value to boolean; use default if not defined as 0/1
-  if myValue = "0" then 
+  if myValue = "0" then
     myBool = False
   elseif myValue = "1" then
     myBool = True
@@ -361,19 +413,19 @@ end sub
 '
 function getDefaultNoPlaylistExport()
   getDefaultNoPlaylistExport = False
-end function 
+end function
 
 
 
 ' N must be numberic. Return value is N converted to a string, padded with
 ' a single "0" if N has only one digit.
-function LdgZ(ByVal N)    
-  if (N >= 0) and (N < 10) then 
-    LdgZ = "0" & N 
-  else 
-    LdgZ = "" & N  
-  end if  
-end function  
+function LdgZ(ByVal N)
+  if (N >= 0) and (N < 10) then
+    LdgZ = "0" & N
+  else
+    LdgZ = "" & N
+  end if
+end function
 
 ' Adds a simple key/value pair to the XML accessible via textfile fout.
 sub addKey(ByVal fout, ByVal key, ByVal val, ByVal keytype)
@@ -382,22 +434,22 @@ sub addKey(ByVal fout, ByVal key, ByVal val, ByVal keytype)
       exit sub
     end if
   end if
-  
+
   if keytype = "integer" then
     if val = 0 then ' nested if because there is no shortcut boolean eval
       exit sub
     end if
   end if
-  
+
   if keytype = "date" then ' convert date into ISO-8601 format
     val = Year(val) & "-" & LdgZ(Month(val)) & "-" & LdgZ(Day(val)) _
       & "T" & LdgZ(Hour(val)) &  ":" & LdgZ(Minute(val)) & ":" & LdgZ(Second(val))
   end if
-  
+
   fout.WriteLine "            <key>" & key & "</key><" & keytype & ">" & val & "</" & keytype & ">"
 end sub
 
-' Return the full path of the file to export to. The file will be located 
+' Return the full path of the file to export to. The file will be located
 ' in the same folder as the database because this folder is writable and user
 ' specific. For maximum compatibility we will use the original iTunes name
 ' which is "iTunes Music Library.xml".
@@ -417,7 +469,7 @@ function getExportFilename()
 '      path = path & "\"
 '    end if
 '    inif.StringValue("Scripts", "LastExportITunesXMLDir") = path
-'    set inif = Nothing  
+'    set inif = Nothing
 '  else
 '    dim dbpath : dbpath = SDB.Database.Path
 '    dim parts : parts = split(dbpath, "\")
@@ -429,14 +481,14 @@ function getExportFilename()
 end function
 
 
-Function ConvertToUnixTimeStamp(byVal myDateTime) 
+Function ConvertToUnixTimeStamp(byVal myDateTime)
  Dim d : d = CDate(myDateTime)
  ConvertToUnixTimeStamp = DateDiff("s", "01/01/1970 00:00:00", d)
 End Function
 
 
 ' similar to the unix timestamp, but then seconds since 1 jan 1904 (whattah????)
-Function ConvertToItunesIntegerTimeStamp(byVal myDateTime) 
+Function ConvertToItunesIntegerTimeStamp(byVal myDateTime)
  Dim d : d = CDate(myDateTime)
  ConvertToItunesIntegerTimeStamp = DateDiff("s", "01/01/1904 00:00:00", d)
 End Function
@@ -449,10 +501,10 @@ function getparentID(byVal myPlaylist)
 	myPlaylistID = myPlaylist.ID
   myParentID = 0
   set iter = SDB.Database.OpenSQL("select ParentPlaylist from PLAYLISTS where IDPlaylist=" & myPlaylistID)
-  while not iter.EOF 
+  while not iter.EOF
     myParentID = iter.ValueByIndex(0)
     iter.next
-  wend      
+  wend
   set iter = nothing
 	getparentID = myParentID
 end function
@@ -462,15 +514,15 @@ end function
 ' process one level of playlist; traverse into child playlists where needed
 sub WritePlaylist(fout, progress, byval progressText, byval myPlaylist)
   dim myChildPlaylists : Set myChildPlaylists = myPlaylist.ChildPlaylists
-  dim i,j, playlist  
+  dim i,j, playlist
   dim parentID
   dim tracks
-  
+
   for i = 0 To myChildPlaylists.Count - 1                             ' For all (first-level) playlists in List...
     Set playlist = myChildPlaylists.Item(i)                                ' ... print out the number of child playlists and tracks
 	  parentID = getparentID(playlist)
     set tracks = playlist.Tracks
-      
+
     progress.Text = progressText & " " & SDB.LocalizedFormat("playlist ""%s"" (%s songs)", playlist.Title, CStr(tracks.Count), 0)
     SDB.ProcessMessages
 
@@ -481,12 +533,12 @@ sub WritePlaylist(fout, progress, byval progressText, byval myPlaylist)
     ' addKey fout, "Visible", Nothing, "empty"
     addKey fout, "Playlist ID", playlist.ID, "integer"
 
-    ' No MM field for this:  
+    ' No MM field for this:
 	  addKey fout, "Playlist Persistent ID", playlist.ID, "string"
 
 	  if parentID <> 0 then
 		  addKey fout, "Parent Persistent ID", parentID, "string"
-	  end if 
+	  end if
     fout.WriteLine "            <key>All Items</key><true/>"
 
     ' if this playlist has any childs playlists add the Folder=true flag to have Pioneer Recordbox correctly parse the folder structure
@@ -494,18 +546,18 @@ sub WritePlaylist(fout, progress, byval progressText, byval myPlaylist)
 			fout.WriteLine "            <key>Folder</key><true/>"
     end if
 
-    if tracks.Count > 0 then      
+    if tracks.Count > 0 then
       fout.WriteLine "            <key>Playlist Items</key>"
       fout.WriteLine "            <array>"
       for j = 0 to tracks.Count - 1
         fout.WriteLine "                <dict>"
         fout.WriteLine "                    <key>Track ID</key><integer>" & tracks.Item(j).ID & "</integer>"
         fout.WriteLine "                </dict>"
-      next 
+      next
       fout.WriteLine "            </array>"
     end if
     fout.WriteLine "        </dict>"
-            
+
     progress.Value = progress.Value + 50
     if Progress.Terminate or Script.Terminate then
       exit for
@@ -532,9 +584,11 @@ sub Export
     exit sub
   end if
 
+  DebugMsg("Export starting...")
+
   dim filename, fso, iter, songCount, fout, progress, song, playlistCount
   dim progressText, i, j, tracks, playlist
-  
+
   filename = getExportFilename()
   if filename = "" then
     SDB.Objects(EXPORTING) = nothing
@@ -556,7 +610,7 @@ sub Export
   set iter = SDB.Database.OpenSQL("select count(*) from SONGS")
   songCount = Int(iter.ValueByIndex(0)) ' needed for progress
   set iter = SDB.Database.OpenSQL("select count(*) from PLAYLISTS")
-  playlistCount = CInt(iter.ValueByIndex(0)) 
+  playlistCount = CInt(iter.ValueByIndex(0))
 
   set progress = SDB.Progress
   progressText = SDB.Localize("Exporting to " & getFilename() & "...")
@@ -578,8 +632,8 @@ sub Export
   ' fout.WriteLine "    <key>Library Persistent ID</key><string>4A9134D6F642512F</string>"
 
   ' Songs
-  ' 
-  ' For each song write available tag values to the library.xml. At this time 
+  '
+  ' For each song write available tag values to the library.xml. At this time
   ' this does not include artwork, volume leveling and album rating.
   if songCount > 0 then
     fout.WriteLine "    <key>Tracks</key>"
@@ -603,7 +657,7 @@ sub Export
       addKey fout, "Size", Song.FileLength, "integer"
       addKey fout, "Total Time", Song.SongLength, "integer"
       if Song.DiscNumber >= 0 then addKey fout, "Disc Number", Song.DiscNumber, "integer" ' potential type problem with DiscNumberStr
-      ' Field not available in MM: <key>Disc Count</key>      
+      ' Field not available in MM: <key>Disc Count</key>
       if Song.TrackOrder >= 0 then addKey fout, "Track Number", Song.TrackOrder, "integer" ' potential type problem with TrackOrderStr
       ' Field not available in MM: <key>Track Count</key>
       if Song.Year > 0 then addKey fout, "Year", Song.Year, "integer"
@@ -613,7 +667,7 @@ sub Export
       addKey fout, "Bit Rate", Int(Song.Bitrate / 1000), "integer"
       addKey fout, "Sample Rate", Song.SampleRate, "integer"
       if Song.PlayCounter > 0 then addKey fout, "Play Count", Song.PlayCounter, "integer"
-      if Song.LastPlayed > 0 then 
+      if Song.LastPlayed > 0 then
         addKey fout, "Play Date", ConvertToItunesIntegerTimeStamp(Song.LastPlayed), "integer"
         addKey fout, "Play Date UTC", Song.LastPlayed, "date"
       end if
@@ -639,17 +693,13 @@ sub Export
       if Song.Genre <> "" then addKey fout, "Genre", escapeXML(Song.Genre), "string"
       addKey fout, "Kind", escapeXML("MPEG audio file"), "string"
       if Song.Comment <> "" then addKey fout, "Comments", escapeXML(Song.Comment), "string"
-      
-      ' 10.10.2010: fixed: location was not correctly URI encoded before
-      ' addKey fout, "Location", "file://localhost/" & Replace(Replace(Escape(Song.Path), "%5C", "/"), "%3A", ":"), "string"
-      ' addKey fout, "Location", encodeLocation("file://localhost/" & Song.Path), "string"
-      ' 04.07.2018: amparsant needs to be escaped
-      addKey fout, "Location", Replace(encodeLocation("file://localhost/" & Song.Path),"&","&#38;"), "string"
+
+      addKey fout, "Location", encodeLocation("file://localhost/" & Song.Path), "string"
 
       ' TODO artwork?
       ' addKey fout, "Artwork Count", 0, "integer"
       ' TODO convert to iTunes rating range. MM: -99999...?. iTunes: -255 (silent) .. 255
-      ' fout.WriteLine "            <key>Volume Adjustment</key><integer>" & escapeXML(Song.Leveling) & "</integer>" 
+      ' fout.WriteLine "            <key>Volume Adjustment</key><integer>" & escapeXML(Song.Leveling) & "</integer>"
 
       ' Fields not available in MM:
       ' fout.WriteLine "            <key>Disc Count</key><integer>" & escapeXML(Song.?) & "</integer>"
@@ -663,10 +713,10 @@ sub Export
     fout.WriteLine "    </dict>"
   end if
   SDB.ProcessMessages
-  
+
   ' Playlists
   '
-  ' This part differs at least with the following items from an original iTunes 
+  ' This part differs at least with the following items from an original iTunes
   ' library.xml:
   ' - iTunes includes a playlist named "Library" with all songs, we don't
   ' - every iTunes playlist has a "Playlist Persistent ID", e.g. "4A9134D6F6425130"
@@ -682,10 +732,10 @@ sub Export
 
     Dim RootPlaylist : Set RootPlaylist = SDB.PlaylistByID(-1) ' Playlist represents the root (virtual) playlist
     call WritePlaylist(fout, progress, progressText, RootPlaylist)
-    
+
     fout.WriteLine "    </array>"
   end if
-  
+
   fout.WriteLine "</dict>"
   fout.WriteLine "</plist>"
   fout.Close ' Close the output file and finish
@@ -697,6 +747,8 @@ sub Export
     fso.DeleteFile(filename) ' remove the output file if terminated
   end if
   SDB.Objects(EXPORTING) = nothing
+
+  DebugMsg("Export finished")
 end sub
 
 
@@ -736,33 +788,36 @@ end sub
 
 ' Called when MM starts up
 sub OnStartup
+  DebugMsg("OnStartup()")
   ' Create and register toolbar button
   Dim btn : Set btn = SDB.Objects("ExportITunesXMLButton")
   If btn Is Nothing Then
-    Set btn = SDB.UI.AddMenuItem(SDB.UI.Menu_TbStandard,0,0) 
+    Set btn = SDB.UI.AddMenuItem(SDB.UI.Menu_TbStandard,0,0)
     btn.Caption = "ExportITunesXML"
     btn.Hint = "Exports all tracks and playlists to an iTunes Music Library.xml file"
     btn.IconIndex = 56
     btn.Visible = True
-    Set SDB.Objects("ExportITunesXMLButton") = btn    
+    Set SDB.Objects("ExportITunesXMLButton") = btn
   End If
   Call Script.UnRegisterHandler("OnToolbar")
   Call Script.RegisterEvent(btn,"OnClick","OnToolbar")
 
   ' Register Option sheet as child under "Library" := -3
-  Call SDB.UI.AddOptionSheet("Export to iTunes XML",Script.ScriptPath,"InitSheet","SaveSheet",-3)  
-  
+  Call SDB.UI.AddOptionSheet("Export to iTunes XML",Script.ScriptPath,"InitSheet","SaveSheet",-3)
+
   ' Register handler for the periodic export
   dim exportTimer : set exportTimer = SDB.CreateTimer(3600000) ' export every 60 minutes (arg in ms)
-  Set SDB.Objects("ExportITunesXMLExportTimer") = exportTimer    
+  Set SDB.Objects("ExportITunesXMLExportTimer") = exportTimer
   Script.RegisterEvent exportTimer, "OnTimer", "periodicExport"
 
   ' Register handler for the export on shutdown
   Script.RegisterEvent SDB,"OnShutdown","shutdownExport"
+  DebugMsg("OnStartup() finished")
 end sub
 
 
 Sub OnInstall()
+  DebugMsg("OnInstall()")
   'Add entries to script.ini if you need to show up in the Scripts menu
   Dim inip : inip = SDB.ScriptsPath & "Scripts.ini"
   Dim inif : Set inif = SDB.Tools.IniFileByPath(inip)
@@ -773,16 +828,17 @@ Sub OnInstall()
     inif.StringValue("ExportITunesXML","DisplayName") = "Export to iTunes XML"
     inif.StringValue("ExportITunesXML","Description") = "Exports all tracks and playlists to an iTunes library.xml file"
     inif.StringValue("ExportITunesXML","Language") = "VBScript"
-    inif.StringValue("ExportITunesXML","ScriptType") = "0"	
+    inif.StringValue("ExportITunesXML","ScriptType") = "0"
 	  'inif.StringValue("ExportITunesXML","Shortcut") = "Ctrl+i"
     SDB.RefreshScriptItems
   End If
   Call OnStartup()
+  DebugMsg("OnInstall() finished")
 End Sub
 
 ' Callback to build the configuration dialog
 Sub InitSheet(Sheet)
-  Dim ini : Set ini = SDB.IniFile  
+  Dim ini : Set ini = SDB.IniFile
   Dim ui : Set ui = SDB.UI
 
 	Dim GroupBox0
@@ -843,7 +899,7 @@ Sub InitSheet(Sheet)
   edt.Caption = "..." ' would be nice if we could have a filer icon like in MediaMonkey system dialogs....
   edt.Common.ControlName = "EITX_FileBrowser"    ' to open file browser.... see getExportFilename()
   ' note: selecting a file would also imply setting the directory
-  edt.common.Enabled = False ' not yet implemented >> deactivate this control 
+  edt.common.Enabled = False ' not yet implemented >> deactivate this control
   '
   y = y + 25
 
@@ -854,7 +910,7 @@ Sub InitSheet(Sheet)
   edt.Autosize = False
   edt.Common.Hint = "The directory where the iTunes Music Library XML file will be stored. " & _
     "If blank/empty this will be initialised to the default location. On Windows 10 this is typically the `%APPDATA%\MediaMonkey` directory."
-  
+
   Set edt = ui.NewEdit(GroupBox0)
   edt.Common.SetRect 80, y, 455-80, 20
   edt.Common.ControlName = "EITX_Directory"
@@ -868,7 +924,7 @@ Sub InitSheet(Sheet)
   edt.common.Enabled = False ' not yet implemented >> deactivate this control
   '
   y = y + 25
-  
+
   Set edt = ui.NewCheckBox(GroupBox0)
   edt.Common.SetRect 20, y-3, 20, 20
   edt.Common.ControlName = "EITX_NoPlaylistExport"

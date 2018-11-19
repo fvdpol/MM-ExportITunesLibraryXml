@@ -56,6 +56,7 @@ Navigate to Tools menu -> Options, and open the "Export to iTunes XML configurat
 
 Note: Serato expects the xml file to be available in the original location where iTunes stores the file, which is typically in `C: \Users\{user}\Music\iTunes`
 
+
 ## Nested playlists, Folders and Traktor
 
 Apple iTunes and MediaMonkey handle nested playlists / folders in a different way. Due to this difference the result in applications like Native Instruments Traktor may sometimes not be what one expects.
@@ -85,11 +86,22 @@ If you select the "Folder" Auto Playlist you should see all tracks from the chil
 Note that Native Instruments Traktor is known to ignore / filter-out playlists that do not contain any tracks. A work-around could be to include a dummy track.
 
 
+## Script Debugging
+
+For better/easier debugging on the script a messages can be logged to the MediaMonkey debug facility using the `DebugMsg(string)` function. 
+To view the output 
+- set the Debug flag in the [ExportITunesXML] section in the MediaMonkey.ini file to 1
+- use the Microsoft/Sysinternals DebugView tool, available from https://docs.microsoft.com/en-us/sysinternals/downloads/debugview
+
+
+
 ## Version History
 
 ### Version 1.6.4
 _in progress_
 - add feature/option to exclude the playlist section in the generated xml file
+- add DebugMsg() function and support framework
+- prevent Anti Malware Scan Interface AMSI_ATTRIBUTE_CONTENT_NAME Error 0x80070490 being raised
 
 
 ### Version 1.6.3
