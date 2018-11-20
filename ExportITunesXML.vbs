@@ -29,7 +29,8 @@
 ' 1.6.4 add feature/option to exclude the playlist section in the generated xml file
 '       add DebugMsg() function and support framework
 '       prevent Anti Malware Scan Interface AMSI_ATTRIBUTE_CONTENT_NAME Error 0x80070490 being raised
-'       resizable option dialog
+'       resizable Options dialog
+'       add file and directory browser in the Options dialog
 ' 
 '
 option explicit     ' report undefined variables, ...
@@ -452,34 +453,8 @@ sub addKey(ByVal fout, ByVal key, ByVal val, ByVal keytype)
   fout.WriteLine "            <key>" & key & "</key><" & keytype & ">" & val & "</" & keytype & ">"
 end sub
 
-' Return the full path of the file to export to. The file will be located
-' in the same folder as the database because this folder is writable and user
-' specific. For maximum compatibility we will use the original iTunes name
-' which is "iTunes Music Library.xml".
-' 29.03.2009: if the new option QUERY_FOLDER is set to true this function
-' will query for the folder to save to instead.
+
 function getExportFilename()
-'  dim path
-'  if QUERY_FOLDER then
-'    dim inif
-'    set inif = SDB.IniFile
-'    path = inif.StringValue("Scripts", "LastExportITunesXMLDir")
-'    path = SDB.SelectFolder(path, SDB.Localize("Select where to export the iTunes XML file to."))
-'    if path = "" then
-'      exit function
-'    end if
-'    if right(path, 1) <> "\" then
-'      path = path & "\"
-'    end if
-'    inif.StringValue("Scripts", "LastExportITunesXMLDir") = path
-'    set inif = Nothing
-'  else
-'    dim dbpath : dbpath = SDB.Database.Path
-'    dim parts : parts = split(dbpath, "\")
-'    dim dbfilename : dbfilename = parts(UBound(parts))
-'    path = Mid(dbpath, 1, Len(dbpath) - Len(dbfilename))
-'  end if
-'  getExportFilename = path + "iTunes Music Library.xml"
   getExportFilename = getDirectory() + getFilename()
 end function
 
@@ -846,7 +821,9 @@ Sub InitSheet(Sheet)
   Dim ini : Set ini = SDB.IniFile
   Dim ui : Set ui = SDB.UI
 
-  DebugMsg("InitSheet()")
+'  DebugMsg("InitSheet()")
+
+  SDB.Objects("ConfigSheet") = Sheet
   
   Sheet.Common.ControlName = "EITX_ConfigSheet"
   Script.RegisterEvent Sheet.Common, "OnResize", "ResizeSettingSheet"
@@ -858,7 +835,7 @@ Sub InitSheet(Sheet)
 	GroupBox0.Caption = "Export to iTunes XML Configuration"
 	GroupBox0.Common.SetRect 10, 10, 500, 250
 
-  Dim edt
+  Dim lbl, edt, btn
   Dim y : y = 25
 
   Set edt = ui.NewCheckBox(GroupBox0)
@@ -893,47 +870,53 @@ Sub InitSheet(Sheet)
   y = y + 25
 
 
-  Set edt = ui.NewLabel(GroupBox0)
-  edt.Common.SetRect 20, y+3, 100, 20
-  edt.Caption = "Filename:"
-  edt.Autosize = False
-  edt.Common.Hint = "The file name for the exported iTunes Music Library XML file. " & _
+  Set lbl = ui.NewLabel(GroupBox0)
+  lbl.Common.SetRect 20, y+3, 100, 20
+  lbl.Caption = "Filename:"
+  lbl.Autosize = False
+  lbl.Common.Hint = "The file name for the exported iTunes Music Library XML file. " & _
     "If blank/empty the default value of `iTunes Music Library.xml` will be used."
   '
   Set edt = ui.NewEdit(GroupBox0)
   edt.Common.SetRect 80, y, 455-80, 20
   edt.Common.ControlName = "EITX_Filename"
   edt.Text = getFilename()
+  edt.Common.Hint = lbl.Common.Hint
   edt.common.Enabled = True
   '
-  Set edt = ui.NewButton(GroupBox0)
-  edt.Common.SetRect 460,y,20,20
-  edt.Caption = "..." ' would be nice if we could have a filer icon like in MediaMonkey system dialogs....
-  edt.Common.ControlName = "EITX_FileBrowser"    ' to open file browser.... see getExportFilename()
-  ' note: selecting a file would also imply setting the directory
-  edt.common.Enabled = False ' not yet implemented >> deactivate this control
+  Set btn = ui.NewButton(GroupBox0)
+  btn.Common.SetRect 460,y,20,20
+  btn.Caption = "..." ' would be nice if we could have a filer icon like in MediaMonkey system dialogs....
+  btn.Common.ControlName = "EITX_FileBrowser"
+  btn.Common.Hint = "Click to open File Browser"
+  btn.common.Enabled = True
+  Call Script.RegisterEvent(btn.common, "OnClick", "FileBrowser") ' note: selecting a file would also imply setting the directory
+  
   '
   y = y + 25
 
 
-  Set edt = ui.NewLabel(GroupBox0)
-  edt.Common.SetRect 20, y+3, 100, 20
-  edt.Caption = "Directory:"
-  edt.Autosize = False
-  edt.Common.Hint = "The directory where the iTunes Music Library XML file will be stored. " & _
-    "If blank/empty this will be initialised to the default location. On Windows 10 this is typically the `%APPDATA%\MediaMonkey` directory."
+  Set lbl = ui.NewLabel(GroupBox0)
+  lbl.Common.SetRect 20, y+3, 100, 20
+  lbl.Caption = "Directory:"
+  lbl.Autosize = False
+  lbl.Common.Hint = "The directory where the iTunes Music Library XML file will be stored. " & _
+    "If blank/empty this will be initialised to the default location. On Windows 10 this is typically the `%APPDATA%\MediaMonkey\` directory."
 
   Set edt = ui.NewEdit(GroupBox0)
   edt.Common.SetRect 80, y, 455-80, 20
   edt.Common.ControlName = "EITX_Directory"
   edt.Text = getDirectory()
+  edt.Common.Hint = lbl.Common.Hint
   edt.common.Enabled = True
   '
-  Set edt = ui.NewButton(GroupBox0)
-  edt.Common.SetRect 460,y,20,20
-  edt.Caption = "..." ' would be nice if we could have a folder icon like in MediaMonkey system dialogs....
-  edt.Common.ControlName = "EITX_DirectoryBrowser"    ' to open dir browser.... see getExportFilename()
-  edt.common.Enabled = False ' not yet implemented >> deactivate this control
+  Set btn = ui.NewButton(GroupBox0)
+  btn.Common.SetRect 460,y,20,20
+  btn.Caption = "..." ' would be nice if we could have a folder icon like in MediaMonkey system dialogs....
+  btn.Common.ControlName = "EITX_DirectoryBrowser"
+  btn.Common.Hint = "Click to open Directory Browser"
+  btn.common.Enabled = True 
+  Call Script.RegisterEvent(btn.common, "OnClick", "DirectoryBrowser")
   '
   y = y + 25
 
@@ -958,13 +941,81 @@ Sub InitSheet(Sheet)
 End Sub
 
 
+' note: selecting a file would also imply setting the directory
+Sub FileBrowser(Obj)
+  Dim Sheet 
+  Set Sheet = SDB.Objects("ConfigSheet")
+  If Not (Sheet is Nothing) then
+    Dim edtFile, edtDir
+    Set edtFile = Sheet.Common.ChildControl("EITX_Filename")
+    Set edtDir = Sheet.Common.ChildControl("EITX_Directory")
+    If Not (edtDir is Nothing or edtDir is Nothing) then      
+      ' Create common dialog and ask where to save the file   
+      ' https://www.mediamonkey.com/wiki/index.php?title=SDBCommonDialog
+      Dim dlg
+      Set dlg = SDB.CommonDialog
+      dlg.DefaultExt="xml"
+      dlg.Filter = "XML Document (*.xml)|*.xml|All files (*.*)|*.*"
+      dlg.FilterIndex = 1
+      dlg.Flags=cdlOFNOverwritePrompt + cdlOFNHideReadOnly
+      dlg.InitDir = edtDir.Text
+      dlg.ShowSave
+
+      If Not dlg.Ok Then
+        Exit Sub   ' if cancel was pressed, exit
+      End If
+
+      ' Get the selected filename
+      Dim FullName
+      FullName = dlg.FileName
+      'DebugMsg("got fullname = " & FullName)
+      Dim pos, NewDir, NewFilename
+      pos = InStrRev(FullName, "\")
+      If pos > 0 Then
+        NewDir = Left(FullName, pos)
+        NewFileName = Mid(FullName, pos+1)
+      Else
+        NewDir = ""
+        NewFilename = FullName
+      End If
+      'DebugMsg("got dir  = " & NewDir)
+      'DebugMsg("got file = " & NewFilename)
+      edtDir.Text = NewDir
+      edtFile.Text = NewFilename
+
+     End if
+  End if 
+End Sub
+
+
+Sub DirectoryBrowser(Obj)
+  Dim Sheet 
+  Set Sheet = SDB.Objects("ConfigSheet")
+  If Not (Sheet is Nothing) then
+    Dim edt 
+    Set edt = Sheet.Common.ChildControl("EITX_Directory")
+    If Not (edt is Nothing) then      
+      Dim str 
+      str = SDB.SelectFolder(edt.Text,"Select Directory Path for storing the iTunes Library")
+      If Not (str = "") Then
+        If Right(str,1) = "\" Then
+          edt.Text = str
+        Else
+          edt.Text = str & "\"
+        End If
+      End If
+    End if
+  End if 
+End Sub
+
+
 Sub ResizeSettingSheet(Control)
   Dim FrameWidth 
   Dim ctrl
 
-  DebugMsg("ResizeSettingSheet()")
+'  DebugMsg("ResizeSettingSheet()")
 '  DebugMsg("ControlName = " & Control.Common.ControlName)
-  DebugMsg("Width = " & Control.Common.Width)
+'  DebugMsg("Width = " & Control.Common.Width)
 
   FrameWidth = Control.Common.Width
   Dim Sheet : Set Sheet = Control.Common.TopParent 
@@ -986,11 +1037,31 @@ Sub ResizeSettingSheet(Control)
 
 End Sub
 
+' remove any eventhandlers/objects associated with the Configuration Sheet
+Sub DisposeSheet()
+  Dim Sheet : Set Sheet = SDB.Objects("ConfigSheet")
+  if Not (Sheet is Nothing) Then
+    DebugMsg("DisposeSheet()")
+    Script.UnRegisterEvents Sheet.Common
+
+    dim btn
+    Set btn = Sheet.Common.ChildControl("EITX_FileBrowser")
+    if Not (btn is Nothing) then
+      Script.UnRegisterEvents btn.Common
+    end if
+    '
+    Set btn = Sheet.Common.ChildControl("EITX_DirectoryBrowser")
+    if Not (btn is Nothing) then
+      Script.UnRegisterEvents btn.Common
+    end if
+
+    SDB.Objects("ConfigSheet") = Nothing
+  end If
+end Sub
 
 ' Callback to store/process when configuration dialog is confimred
 Sub SaveSheet(Sheet)
-  DebugMsg("SaveSheet")
-  Script.UnRegisterEvents Sheet.Common
+'  DebugMsg("SaveSheet")
   '
   setExportAtShutdown(Sheet.Common.ChildControl("EITX_ExportAtShutdown").Checked)
   setPeriodicExport(Sheet.Common.ChildControl("EITX_PeriodicExport").Checked)
@@ -1000,9 +1071,10 @@ Sub SaveSheet(Sheet)
   '
   setNoPlaylistExport(Sheet.Common.ChildControl("EITX_NoPlaylistExport").Checked)
 
+  Call DisposeSheet()
 End Sub
 
 Sub CancelSheet(Sheet)
-  DebugMsg("CancelSheet")
-  Script.UnRegisterEvents Sheet.Common
+'  DebugMsg("CancelSheet")
+  Call DisposeSheet()
 End Sub

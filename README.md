@@ -102,6 +102,8 @@ _in progress_
 - add feature/option to exclude the playlist section in the generated xml file
 - add DebugMsg() function and support framework
 - prevent Anti Malware Scan Interface AMSI_ATTRIBUTE_CONTENT_NAME Error 0x80070490 being raised
+- resizable Options dialog
+- add file and directory browser in the Options dialog
 
 
 ### Version 1.6.3
