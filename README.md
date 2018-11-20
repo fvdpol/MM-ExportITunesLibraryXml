@@ -50,11 +50,11 @@ Navigate to Tools menu -> Options, and open the "Export to iTunes XML configurat
 | Export at Shutdown | If option is set the iTunes library xml will be exported when MediaMonkey is closed. <br> Default is off.| 
 | Periodic Export    | If option is set the iTunes library xml will be exported every 60 minutes. <br> Default is off.|
 | Filename           | The file name for the exported iTunes Music Library XML file. <br> If blank/empty the default value of `iTunes Music Library.xml` will be used.|
-| Directory          | The directory where the iTunes Music Library XML file will be stored. <br> If blank/empty this will be initialised to the default location. On Windows 10 this is typically the `%APPDATA%\MediaMonkey` directory. |
+| Directory          | The directory where the iTunes Music Library XML file will be stored. <br> If blank/empty this will be initialised to the default location. On Windows 10 this is typically the `%APPDATA%\MediaMonkey\` directory. |
 | Exclude export of Playlists | If option is set the iTunes library xml will only contain the tracks; the playlists will be excluded. <br> Default is off.|
 
 
-Note: Serato expects the xml file to be available in the original location where iTunes stores the file, which is typically in `C: \Users\{user}\Music\iTunes`
+Note: Serato expects the xml file to be available in the original location where iTunes stores the file, which is typically in `C: \Users\{user}\Music\iTunes\`
 
 
 ## Nested playlists, Folders and Traktor
@@ -174,8 +174,8 @@ http://www.mediamonkey.com/forum/viewtopic.php?f=2&t=31680#p162175
 
 ## Future changes/enhancements/ideas
 
-- configuration settings for file location & flags (auto export, periodic export) 
 - if needed: configurable quirks for compatibility with other appliciations
 - document compatibility with other applications/dj software (feedback from users required)
 - selection of playlists to be exported 
+- rewrite logic/rules for output path
 
