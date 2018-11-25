@@ -31,7 +31,8 @@
 '       prevent Anti Malware Scan Interface AMSI_ATTRIBUTE_CONTENT_NAME Error 0x80070490 being raised
 '       resizable Options dialog
 '       add file and directory browser in the Options dialog
-' 
+'       restructure Options dialog, create logical grouping of settings
+'
 '
 option explicit     ' report undefined variables, ...
 
@@ -617,6 +618,7 @@ sub Export
     fout.WriteLine "    <key>Tracks</key>"
     fout.WriteLine "    <dict>"
     i = 0
+    DebugMsg("Track Export...")
     set iter = SDB.Database.QuerySongs("")
     while not iter.EOF and not Progress.Terminate and not Script.Terminate
       set song = iter.Item
@@ -705,6 +707,7 @@ sub Export
   ' e.g. randomized or size-limited playlists will contain a static snapshot taken
   ' at export time.
   if playlistCount > 0 and getNoPlaylistExport() = False and not Progress.Terminate and not Script.Terminate then
+    DebugMsg("Playlist Export...")
     fout.WriteLine "    <key>Playlists</key>"
     fout.WriteLine "    <array>"
 
@@ -818,99 +821,76 @@ End Sub
 
 ' Callback to build the configuration dialog
 Sub InitSheet(Sheet)
-  Dim ini : Set ini = SDB.IniFile
-  Dim ui : Set ui = SDB.UI
+  Dim y : y = 0
 
-'  DebugMsg("InitSheet()")
-
-  SDB.Objects("ConfigSheet") = Sheet
-  
+  SDB.Objects("ConfigSheet") = Sheet  
   Sheet.Common.ControlName = "EITX_ConfigSheet"
   Script.RegisterEvent Sheet.Common, "OnResize", "ResizeSettingSheet"
 
+  y = y + CreateGroupbox0(Sheet, y, "Output File")
+  y = y + CreateGroupbox1(Sheet, y, "Automatic Export")
+  y = y + CreateGroupbox2(Sheet, y, "Output Modification")
 
-	Dim GroupBox0
-	Set GroupBox0 = UI.NewGroupBox(Sheet)
-  GroupBox0.Common.ControlName = "EITX_Groupbox0"
-	GroupBox0.Caption = "Export to iTunes XML Configuration"
-	GroupBox0.Common.SetRect 10, 10, 500, 250
+  ' force resize event to make the layout consistent
+  Call ResizeSettingSheet(Sheet)
 
-  Dim lbl, edt, btn
-  Dim y : y = 25
+End Sub
 
-  Set edt = ui.NewCheckBox(GroupBox0)
-  edt.Common.SetRect 20, y-3, 20, 20
-  edt.Common.ControlName = "EITX_ExportAtShutdown"
-  edt.Checked = getExportAtShutdown()
-  edt.common.Enabled = True
-  '
-  Set edt = ui.NewLabel(GroupBox0)
-  edt.Common.SetRect 40, y, 100, 20
-  edt.Caption = "Export at shutdown"
-  edt.Autosize = False
-  edt.Common.Hint = "If option is set the iTunes library xml will be exported when MediaMonkey is closed. " & _
-    "Default is off."
-  '
+
+' create groupbox for the output selector
+' returns height
+function CreateGroupbox0(Sheet, Top, Caption)
+  Dim ui : Set ui = SDB.UI
+  Dim box, lbl, edt, btn
+  Dim y : y = 0
+
+	Set box = UI.NewGroupBox(Sheet)
+  box.Common.ControlName = "EITX_Groupbox0"
+	box.Caption = Caption
+	box.Common.SetRect 10, Top + 10, 500, 200
   y = y + 25
 
 
-  Set edt = ui.NewCheckBox(GroupBox0)
-  edt.Common.SetRect 20, y-3, 20, 20
-  edt.Common.ControlName = "EITX_PeriodicExport"
-  edt.Checked = getPeriodicExport()
-  edt.common.Enabled = True
-  '
-  Set edt = ui.NewLabel(GroupBox0)
-  edt.Common.SetRect 40, y, 100, 20
-  edt.Caption = "Periodic Export"
-  edt.Autosize = False
-  edt.Common.Hint = "If option is set the iTunes library xml will be exported every 60 minutes. " & _
-    "Default is off."
-  '
-  y = y + 25
-
-
-  Set lbl = ui.NewLabel(GroupBox0)
+  Set lbl = ui.NewLabel(box)
   lbl.Common.SetRect 20, y+3, 100, 20
   lbl.Caption = "Filename:"
   lbl.Autosize = False
   lbl.Common.Hint = "The file name for the exported iTunes Music Library XML file. " & _
     "If blank/empty the default value of `iTunes Music Library.xml` will be used."
   '
-  Set edt = ui.NewEdit(GroupBox0)
+  Set edt = ui.NewEdit(box)
   edt.Common.SetRect 80, y, 455-80, 20
   edt.Common.ControlName = "EITX_Filename"
   edt.Text = getFilename()
   edt.Common.Hint = lbl.Common.Hint
   edt.common.Enabled = True
   '
-  Set btn = ui.NewButton(GroupBox0)
+  Set btn = ui.NewButton(box)
   btn.Common.SetRect 460,y,20,20
   btn.Caption = "..." ' would be nice if we could have a filer icon like in MediaMonkey system dialogs....
   btn.Common.ControlName = "EITX_FileBrowser"
   btn.Common.Hint = "Click to open File Browser"
   btn.common.Enabled = True
   Call Script.RegisterEvent(btn.common, "OnClick", "FileBrowser") ' note: selecting a file would also imply setting the directory
-  
   '
   y = y + 25
 
 
-  Set lbl = ui.NewLabel(GroupBox0)
+  Set lbl = ui.NewLabel(box)
   lbl.Common.SetRect 20, y+3, 100, 20
   lbl.Caption = "Directory:"
   lbl.Autosize = False
   lbl.Common.Hint = "The directory where the iTunes Music Library XML file will be stored. " & _
     "If blank/empty this will be initialised to the default location. On Windows 10 this is typically the `%APPDATA%\MediaMonkey\` directory."
-
-  Set edt = ui.NewEdit(GroupBox0)
+  '
+  Set edt = ui.NewEdit(box)
   edt.Common.SetRect 80, y, 455-80, 20
   edt.Common.ControlName = "EITX_Directory"
   edt.Text = getDirectory()
   edt.Common.Hint = lbl.Common.Hint
   edt.common.Enabled = True
   '
-  Set btn = ui.NewButton(GroupBox0)
+  Set btn = ui.NewButton(box)
   btn.Common.SetRect 460,y,20,20
   btn.Caption = "..." ' would be nice if we could have a folder icon like in MediaMonkey system dialogs....
   btn.Common.ControlName = "EITX_DirectoryBrowser"
@@ -920,13 +900,88 @@ Sub InitSheet(Sheet)
   '
   y = y + 25
 
-  Set edt = ui.NewCheckBox(GroupBox0)
+
+  ' end of groupbox
+  box.Common.Height = y
+  y = y + 5
+
+  CreateGroupbox0 = y
+end function
+
+
+' create groupbox for the schedule
+' returns height
+function CreateGroupbox1(Sheet, Top, Caption)
+  Dim ui : Set ui = SDB.UI
+  Dim box, lbl, edt, btn
+  Dim y : y = 0
+
+  Set box = UI.NewGroupBox(Sheet)
+  box.Common.ControlName = "EITX_Groupbox1"
+	box.Caption = Caption
+	box.Common.SetRect 10, Top + 10, 500, 200
+  y = y + 25
+
+
+  Set edt = ui.NewCheckBox(box)
+  edt.Common.SetRect 20, y-3, 20, 20
+  edt.Common.ControlName = "EITX_ExportAtShutdown"
+  edt.Checked = getExportAtShutdown()
+  edt.common.Enabled = True
+  '
+  Set edt = ui.NewLabel(box)
+  edt.Common.SetRect 40, y, 100, 20
+  edt.Caption = "Export at shutdown"
+  edt.Autosize = False
+  edt.Common.Hint = "If option is set the iTunes library xml will be exported when MediaMonkey is closed. " & _
+    "Default is off."
+  y = y + 25
+
+
+  Set edt = ui.NewCheckBox(box)
+  edt.Common.SetRect 20, y-3, 20, 20
+  edt.Common.ControlName = "EITX_PeriodicExport"
+  edt.Checked = getPeriodicExport()
+  edt.common.Enabled = True
+  '
+  Set edt = ui.NewLabel(box)
+  edt.Common.SetRect 40, y, 100, 20
+  edt.Caption = "Periodic Export"
+  edt.Autosize = False
+  edt.Common.Hint = "If option is set the iTunes library xml will be exported every 60 minutes. " & _
+    "Default is off."
+  y = y + 25
+
+
+' end of groupbox
+  box.Common.Height = y
+  y = y + 5
+
+  CreateGroupbox1 = y
+end function
+
+
+' create groupbox for the output modifications
+' returns height
+function CreateGroupbox2(Sheet, Top, Caption)
+  Dim ui : Set ui = SDB.UI
+  Dim box, lbl, edt, btn
+  Dim y : y = 0
+
+  Set box = UI.NewGroupBox(Sheet)
+  box.Common.ControlName = "EITX_Groupbox2"
+	box.Caption = Caption
+	box.Common.SetRect 10, Top + 10, 500, 200
+  y = y + 25
+  
+  
+  Set edt = ui.NewCheckBox(box)
   edt.Common.SetRect 20, y-3, 20, 20
   edt.Common.ControlName = "EITX_NoPlaylistExport"
   edt.Checked = getNoPlaylistExport()
   edt.common.Enabled = True
   '
-  Set edt = ui.NewLabel(GroupBox0)
+  Set edt = ui.NewLabel(box)
   edt.Common.SetRect 40, y, 100, 20
   edt.Caption = "Exclude export of Playlists"
   edt.Autosize = False
@@ -934,11 +989,17 @@ Sub InitSheet(Sheet)
     "Default is off."
   '
   y = y + 25
+  
 
-  ' force resize event to make the layout consistent
-  Call ResizeSettingSheet(Sheet)
+' end of groupbox
+  box.Common.Height = y
+  y = y + 5
 
-End Sub
+  CreateGroupbox2 = y
+end function
+
+
+
 
 
 ' note: selecting a file would also imply setting the directory
@@ -1035,13 +1096,19 @@ Sub ResizeSettingSheet(Control)
   Set ctrl = Sheet.Common.ChildControl("EITX_DirectoryBrowser")
   ctrl.Common.Left = FrameWidth - 20 - 30
 
+  Set ctrl = Sheet.Common.ChildControl("EITX_Groupbox1")
+  ctrl.Common.Width = FrameWidth - 20
+
+  Set ctrl = Sheet.Common.ChildControl("EITX_Groupbox2")
+  ctrl.Common.Width = FrameWidth - 20
+
 End Sub
 
 ' remove any eventhandlers/objects associated with the Configuration Sheet
 Sub DisposeSheet()
   Dim Sheet : Set Sheet = SDB.Objects("ConfigSheet")
+  'DebugMsg("DisposeSheet()")
   if Not (Sheet is Nothing) Then
-    DebugMsg("DisposeSheet()")
     Script.UnRegisterEvents Sheet.Common
 
     dim btn
@@ -1061,7 +1128,7 @@ end Sub
 
 ' Callback to store/process when configuration dialog is confimred
 Sub SaveSheet(Sheet)
-'  DebugMsg("SaveSheet")
+  'DebugMsg("SaveSheet")
   '
   setExportAtShutdown(Sheet.Common.ChildControl("EITX_ExportAtShutdown").Checked)
   setPeriodicExport(Sheet.Common.ChildControl("EITX_PeriodicExport").Checked)
@@ -1075,6 +1142,5 @@ Sub SaveSheet(Sheet)
 End Sub
 
 Sub CancelSheet(Sheet)
-'  DebugMsg("CancelSheet")
   Call DisposeSheet()
 End Sub
