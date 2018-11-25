@@ -106,6 +106,7 @@ _in progress_
 - prevent Anti Malware Scan Interface AMSI_ATTRIBUTE_CONTENT_NAME Error 0x80070490 being raised
 - resizable Options dialog
 - add file and directory browser in the Options dialog
+- restructure Options dialog, create logical grouping for settings
 
 
 ### Version 1.6.3

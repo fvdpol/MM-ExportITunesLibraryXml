@@ -28,10 +28,10 @@
 '       add "Play Date" (timestamp in numeric format) in addition to the "Play Date UTC"
 ' 1.6.4 add feature/option to exclude the playlist section in the generated xml file
 '       add DebugMsg() function and support framework
-'       prevent Anti Malware Scan Interface AMSI_ATTRIBUTE_CONTENT_NAME Error 0x80070490 being raised
+'       suppress Anti Malware Scan Interface AMSI_ATTRIBUTE_CONTENT_NAME Error 0x80070490 being raised
 '       resizable Options dialog
 '       add file and directory browser in the Options dialog
-'       restructure Options dialog, create logical grouping of settings
+'       restructure Options dialog, create logical grouping for settings
 '
 '
 option explicit     ' report undefined variables, ...
@@ -59,7 +59,7 @@ function encodeLocation(ByVal location)
     ' running the JScript function (scriptControl.Run()) results in an error being logged in DbgView
     ' [14856] [2018-11-18 18:17:37.828] [error  ] [AMSI       ] [14856: 6220] AMSI_ATTRIBUTE_CONTENT_NAME Error 0x80070490
     ' >> AMSI is the Windows "Anti Malware Scan Interface"; used by Windows Defender and AVG
-    ' setting the AllowUI to false prevents these errors from being raised
+    ' setting the AllowUI to false seems to prevent these errors from being raised (why is that???)
     scriptControl.AllowUI = False
   end if
   location = replace(location, "\", "/")
