@@ -49,10 +49,10 @@ Navigate to Tools menu -> Options, and open the "Export to iTunes XML configurat
 
 | Setting            | Description |
 |--------------------|-------------|
-| Export at Shutdown | If option is set the iTunes library xml will be exported when MediaMonkey is closed. <br> Default is off.| 
-| Periodic Export    | If option is set the iTunes library xml will be exported every 60 minutes. <br> Default is off.|
 | Filename           | The file name for the exported iTunes Music Library XML file. <br> If blank/empty the default value of `iTunes Music Library.xml` will be used.|
 | Directory          | The directory where the iTunes Music Library XML file will be stored. <br> If blank/empty this will be initialised to the default location. On Windows 10 this is typically the `%APPDATA%\MediaMonkey\` directory. |
+| Export at Shutdown | If option is set the iTunes library xml will be exported when MediaMonkey is closed. <br> Default is off.| 
+| Periodic Export    | If option is set the iTunes library xml will be exported every 60 minutes. <br> Default is off.|
 | Exclude export of Playlists | If option is set the iTunes library xml will only contain the tracks; the playlists will be excluded. <br> Default is off.|
 
 
@@ -100,10 +100,10 @@ To view the output
 ## Version History
 
 ### Version 1.6.4
-_in progress_
+_Released on November 25, 2018_
 - add feature/option to exclude the playlist section in the generated xml file
 - add DebugMsg() function and support framework
-- prevent Anti Malware Scan Interface AMSI_ATTRIBUTE_CONTENT_NAME Error 0x80070490 being raised
+- suppress Anti Malware Scan Interface AMSI_ATTRIBUTE_CONTENT_NAME Error 0x80070490
 - resizable Options dialog
 - add file and directory browser in the Options dialog
 - restructure Options dialog, create logical grouping for settings
