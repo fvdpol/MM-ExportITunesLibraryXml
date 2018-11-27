@@ -32,6 +32,7 @@
 '       resizable Options dialog
 '       add file and directory browser in the Options dialog
 '       restructure Options dialog, create logical grouping for settings
+' 1.6.5 ....
 '
 '
 option explicit     ' report undefined variables, ...
