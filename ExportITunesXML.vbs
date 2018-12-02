@@ -1,5 +1,5 @@
 ' This script exports the complete MediaMonkey database (songs and playlist) into
-' the iTunes xml format. Some caveats apply, for details and the latest version
+' the iTunes XML format. Some caveats apply, for details and the latest version
 ' see the MediaMonkey forum thread at
 ' http://www.mediamonkey.com/forum/viewtopic.php?f=2&t=31680
 '
@@ -8,7 +8,7 @@
 ' 1.1   options added for disabling timer and showing a file selection dialog
 ' 1.2   fixed: unicode characters (e.g. Chinese) were encoded different than iTunes does
 ' 1.3   fixed: handling of & and # in URI encoding, added Last Played
-' 1.4   fixed: Traktor failing import due to invalid characters in xml (& -> &#38;)
+' 1.4   fixed: Traktor failing import due to invalid characters in XML (& -> &#38;)
 ' 1.5   added BPM field, added forced export on shutdown (Matthias, 12.12.2012)
 '       added child-playlists (Matthias, 12.12.2012)
 ' 1.6   migrate from report to MediaMonkey plugin with MMIP installer
@@ -20,13 +20,13 @@
 '         - correctly handle playlists with duplicate names
 '         - export using same sort order as MediaMonkey
 '         - export parent before children (as per iTunes behaviour)
-' 1.6.3 reorder xml fields to (better) match iTunes format
+' 1.6.3 reorder XML fields to (better) match iTunes format
 '       add Persistent ID for compatibility with Serato DJ
 '       add Grouping in export
 '       add dummy Library Persistent ID to the header for compatibility with Pioneer Recordbox DJ
 '       mark playlists that have sub-playlists as 'folder' (for compatibility with Pioneer Recordbox DJ)
 '       add "Play Date" (timestamp in numeric format) in addition to the "Play Date UTC"
-' 1.6.4 add feature/option to exclude the playlist section in the generated xml file
+' 1.6.4 add feature/option to exclude the playlist section in the generated XML file
 '       add DebugMsg() function and support framework
 '       suppress Anti Malware Scan Interface AMSI_ATTRIBUTE_CONTENT_NAME Error 0x80070490 being raised
 '       resizable Options dialog
@@ -107,7 +107,7 @@ end function
 ' Note that a bug in AscW still prevents the correct handling of unicode
 ' codepoints > 65535.
 '
-' added escaping of xml special characters as per original itunes and required by Traktor parser
+' added escaping of XML special characters as per original itunes and required by Traktor parser
 function escapeXML(ByVal srcstring)
   dim i, codepoint, currentchar, replacement
   i = 1
@@ -555,7 +555,7 @@ end sub
 ' Exports the full MM library and playlists into an iTunes compatible
 ' library.xml. This is not intended to make MM's database available to
 ' iTunes itself but to provide a bridge to other applications which are
-' able to read the iTunes library xml.
+' able to read the iTunes library XML.
 sub Export
   if SDB.Objects(EXPORTING) is nothing then
     SDB.Objects(EXPORTING) = SDB
@@ -788,6 +788,10 @@ sub OnStartup
   'myOptionSheet = SDB.UI.AddOptionSheet("Export to iTunes XML",Script.ScriptPath,"InitSheet","SaveSheet",-3)
   Dim myOptionSheet
   myOptionSheet = SDB.UI.AddOptionSheetEx("Export to iTunes XML",Script.ScriptPath,"InitSheet","SaveSheet","CancelSheet",-3)
+
+  Dim myOptionSheetLocation
+  myOptionSheetLocation = SDB.UI.AddOptionSheetEx("File Location Rewrite Rules",Script.ScriptPath,"InitSheetLocation","SaveSheetLocation","CancelSheetLocation", myOptionSheet)
+
   
   ' Register handler for the periodic export
   dim exportTimer : set exportTimer = SDB.CreateTimer(3600000) ' export every 60 minutes (arg in ms)
@@ -934,7 +938,7 @@ function CreateGroupbox1(Sheet, Top, Caption)
   edt.Common.SetRect 40, y, 100, 20
   edt.Caption = "Export at shutdown"
   edt.Autosize = False
-  edt.Common.Hint = "If option is set the iTunes library xml will be exported when MediaMonkey is closed. " & _
+  edt.Common.Hint = "If option is set the iTunes library XML will be exported when MediaMonkey is closed. " & _
     "Default is off."
   y = y + 25
 
@@ -949,7 +953,7 @@ function CreateGroupbox1(Sheet, Top, Caption)
   edt.Common.SetRect 40, y, 100, 20
   edt.Caption = "Periodic Export"
   edt.Autosize = False
-  edt.Common.Hint = "If option is set the iTunes library xml will be exported every 60 minutes. " & _
+  edt.Common.Hint = "If option is set the iTunes library XML will be exported every 60 minutes. " & _
     "Default is off."
   y = y + 25
 
@@ -984,13 +988,48 @@ function CreateGroupbox2(Sheet, Top, Caption)
   '
   Set edt = ui.NewLabel(box)
   edt.Common.SetRect 40, y, 100, 20
-  edt.Caption = "Exclude export of Playlists"
+  edt.Caption = "Exclude Export of Playlists"
   edt.Autosize = False
-  edt.Common.Hint = "If option is set the iTunes library xml will only contain the tracks; the playlists will be excluded. " & _
+  edt.Common.Hint = "If option is set the iTunes library XML will only contain the tracks; the playlists will be excluded. " & _
     "Default is off."
   '
   y = y + 25
-  
+
+
+  Set edt = ui.NewCheckBox(box)
+  edt.Common.SetRect 20, y-3, 20, 20
+  'edt.Common.ControlName = "EITX_NoPlaylistExport"
+  'edt.Checked = getNoPlaylistExport()
+  edt.common.Enabled = False
+  '
+  Set edt = ui.NewLabel(box)
+  edt.Common.SetRect 40, y, 100, 20
+  edt.Caption = "Rewrite File Location in iTunes XML"
+  edt.Autosize = False
+  edt.Common.Hint = "If option is set the file locations in the iTunes library XML will be " & _
+    "modified by appying rewrite rules. This may be usefull in scenarios where the library is " & _
+    "stored on a network share or other (non-local) location. " & _
+    "Default is off."
+  '
+  y = y + 25
+
+
+  Set edt = ui.NewCheckBox(box)
+  edt.Common.SetRect 20, y-3, 20, 20
+  'edt.Common.ControlName = "EITX_NoPlaylistExport"
+  'edt.Checked = getNoPlaylistExport()
+  edt.common.Enabled = False
+  '
+  Set edt = ui.NewLabel(box)
+  edt.Common.SetRect 40, y, 100, 20
+  edt.Caption = "Add Original Location XML Element"
+  edt.Autosize = False
+  edt.Common.Hint = "If option is set a custom element is added to the XML containing the original location before applying " & _
+    "any rewrite rules. This option is only relevant in combination with the Rewrite File Location option. " & _
+    "Default is off."
+  '
+  y = y + 25
+  ' TODO - gray-out if the rewrite is not enabled
 
 ' end of groupbox
   box.Common.Height = y
@@ -1145,3 +1184,208 @@ End Sub
 Sub CancelSheet(Sheet)
   Call DisposeSheet()
 End Sub
+
+
+
+
+Sub InitSheetLocation(Sheet)
+  Dim ui : Set ui = SDB.UI
+  Dim y : y = 0
+
+  SDB.Objects("ConfigSheetLocation") = Sheet  
+  Sheet.Common.ControlName = "EITX_ConfigSheetLocation"
+  Script.RegisterEvent Sheet.Common, "OnResize", "ResizeSettingSheetLocation"
+
+
+  Dim tl 
+  Set tl = ui.NewTreeList(Sheet)
+  y = y + 10
+
+  tl.Common.SetRect 10,y, 400,150
+  tl.Common.ControlName = "EITX_LocationTreeList"
+  tl.HeaderVisible = True
+  tl.HeaderAddColumn("Original Path")
+  tl.HeaderAddColumn("Rewrite To")
+  tl.HeaderColumnWidth(0) = 200
+  tl.HeaderColumnWidth(1) = 200
+  tl.GridExtensions = True
+  tl.ShowTreeLines = False
+  tl.FullRowSelect = True
+
+  Script.RegisterEvent tl, "OnGetText", "GetNodeText"
+  Script.RegisterEvent tl, "OnFocusChanged", "OnFocusChanged"
+
+  dim tli 
+  set tli = tl.AddNode(Nothing)
+  tli.UserText = "usertext 1a" & vbnewline & "usertext 1b"
+
+  set tli = tl.AddNode(Nothing)
+  tli.UserText = "usertext 2a" & vbnewline & "usertext 2b"
+
+  set tli = tl.AddNode(Nothing)
+  tli.UserText = "usertext 3a" & vbnewline & "usertext 3b"
+
+
+  y=y+150
+
+  ' TODO: add option (checkbox) to include original Location in XML (additional element)
+
+  dim top 
+  top = y
+  y = 0
+
+  dim box
+  set box = ui.NewGroupBox(Sheet)
+  box.Common.ControlName = "EITX_LocationGroupbox"
+	box.Caption = "Edit file location rewrite rule"
+	box.Common.SetRect 10, top + 10, 500, 200
+  y = y + 25
+
+  dim lbl
+  dim edt
+
+  Set lbl = ui.NewLabel(box)
+  lbl.Common.SetRect 20, y+3, 100, 20
+  lbl.Caption = "Original:"
+  lbl.Autosize = False
+  lbl.Common.Hint = "The file name for the exported iTunes Music Library XML file. " & _
+    "If blank/empty the default value of `iTunes Music Library.xml` will be used."
+  '
+  Set edt = ui.NewEdit(box)
+  edt.Common.SetRect 80, y, 455-80, 20
+  edt.Common.ControlName = "EITX_LocationOriginal"
+'  edt.Text = getFilename()
+  edt.Common.Hint = lbl.Common.Hint
+  edt.common.Enabled = True
+
+  y = y + 25
+
+  Set lbl = ui.NewLabel(box)
+  lbl.Common.SetRect 20, y+3, 100, 20
+  lbl.Caption = "Rewrite to:"
+  lbl.Autosize = False
+  lbl.Common.Hint = "The file name for the exported iTunes Music Library XML file. " & _
+    "If blank/empty the default value of `iTunes Music Library.xml` will be used."
+  '
+  Set edt = ui.NewEdit(box)
+  edt.Common.SetRect 80, y, 455-80, 20
+  edt.Common.ControlName = "EITX_LocationRewriteTo"
+'  edt.Text = getFilename()
+  edt.Common.Hint = lbl.Common.Hint
+  edt.common.Enabled = True
+
+  y = y + 25
+
+  dim btn
+  set btn = ui.NewButton(box)
+  btn.Common.SetRect 80, y+3, 70, 25
+  btn.Caption = "Update"
+  btn.Common.Hint = "Update the selected rewrite rule."
+  btn.Common.Enabled = False       ' TODO -- enable/disable depending on input/selected data
+
+  set btn = ui.NewButton(box)
+  btn.Common.SetRect 80 + 80, y+3, 70, 25
+  btn.Caption = "Add"
+  btn.Common.Hint = "Add as new rewrite rule."
+  btn.Common.Enabled = False
+
+  set btn = ui.NewButton(box)
+  btn.Common.SetRect 80 + 80 + 80, y+3, 70, 25
+  btn.Caption = "Delete"
+  btn.Common.Hint = "Remove the selected rewrite rule."
+  btn.Common.Enabled = False
+
+  y = y + 25
+
+
+  y = y + 10
+  
+' end of groupbox
+  box.Common.Height = y
+  y = y + 5
+
+
+  ' force resize event to make the layout consistent
+  Call ResizeSettingSheetLocation(Sheet)
+
+End Sub
+
+
+Function OnFocusChanged(TreeListItem,Column)
+  DebugMsg("OnFocusChanged")
+
+  'OnNodeChecked(TreeListItem)
+End Function
+
+Function GetNodeText(Node,ColumnID)
+  Dim a : a=Split(Node.Usertext,VbNewLine)
+  If ColumnID=0 Then GetNodeText = a(0)
+  If ColumnID=1 Then GetNodeText = a(1)
+End Function
+
+
+
+Sub ResizeSettingSheetLocation(Control)
+  Dim FrameWidth 
+  Dim ctrl
+
+  DebugMsg("ResizeSettingSheetLocation()")
+  DebugMsg("ControlName = " & Control.Common.ControlName)
+  DebugMsg("Width = " & Control.Common.Width)
+
+  FrameWidth = Control.Common.Width
+  Dim Sheet : Set Sheet = Control.Common.TopParent 
+  
+  Set ctrl = Sheet.Common.ChildControl("EITX_LocationTreeList")
+  ctrl.Common.Width = FrameWidth - 20
+  ctrl.HeaderColumnWidth(0) = ctrl.Common.Width / 2
+  ctrl.HeaderColumnWidth(1) = ctrl.Common.Width / 2
+  
+  Set ctrl = Sheet.Common.ChildControl("EITX_LocationGroupbox")
+  ctrl.Common.Width = FrameWidth - 20
+
+  Set ctrl = Sheet.Common.ChildControl("EITX_LocationOriginal")
+  ctrl.Common.Width = FrameWidth - 20 - 15 - 80
+
+  Set ctrl = Sheet.Common.ChildControl("EITX_LocationRewriteTo")
+  ctrl.Common.Width = FrameWidth - 20 - 15 - 80
+
+End Sub
+
+' remove any eventhandlers/objects associated with the Configuration Sheet
+Sub DisposeSheetLocation()
+  Dim Sheet : Set Sheet = SDB.Objects("ConfigSheetLocation")
+  'DebugMsg("DisposeSheet()")
+  if Not (Sheet is Nothing) Then
+    Script.UnRegisterEvents Sheet.Common
+
+    dim tl
+    Set tl = Sheet.Common.ChildControl("EITX_LocationTreeList")
+    if Not (tl is Nothing) then
+      Script.UnRegisterEvents tl.Common
+    end if
+    '
+    SDB.Objects("ConfigSheetLocation") = Nothing
+  end If
+end Sub
+
+' Callback to store/process when configuration dialog is confimred
+Sub SaveSheetLocation(Sheet)
+  'DebugMsg("SaveSheet")
+  '
+'  setExportAtShutdown(Sheet.Common.ChildControl("EITX_ExportAtShutdown").Checked)
+'  setPeriodicExport(Sheet.Common.ChildControl("EITX_PeriodicExport").Checked)
+  '
+'  setFilename(Sheet.Common.ChildControl("EITX_Filename").Text)
+'  setDirectory(Sheet.Common.ChildControl("EITX_Directory").Text)
+  '
+'  setNoPlaylistExport(Sheet.Common.ChildControl("EITX_NoPlaylistExport").Checked)
+
+  Call DisposeSheetLocation()
+End Sub
+
+Sub CancelSheetLocation(Sheet)
+  Call DisposeSheetLocation()
+End Sub
+
+
